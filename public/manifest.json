@@ -1,0 +1,17 @@
+{
+  "short_name": "Koala Score",
+  "name": "Koala Tênis Score",
+  "description": "Marcador de placar para Tênis com suporte a botões Bluetooth",
+  "icons": [
+    {
+      "src": "./assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "start_url": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0F1115",
+  "background_color": "#0F1115"
+}

@@ -1,25 +1,76 @@
 {
   "expo": {
-    "name": "app-placar-celular",
-    "slug": "app-placar-celular",
-    "version": "1.0.0",
-    "orientation": "portrait",
+    "name": "Koala Tênis Score",
+    "slug": "koala-tenis-score",
+    "version": "1.0.1",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.adailtonmro.koalatenisscore",
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar.",
+        "NSBluetoothPeripheralUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0F1115",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.adailtonmro.koalatenisscore"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "pwa": {
+        "manifest": {
+          "name": "Koala Tênis Score",
+          "short_name": "Koala Score",
+          "description": "Marcador de placar para Tênis com suporte a botões Bluetooth",
+          "background_color": "#0F1115",
+          "theme_color": "#0F1115",
+          "display": "standalone",
+          "orientation": "any",
+          "start_url": "/",
+          "icons": [
+            {
+              "src": "./assets/icon.png",
+              "sizes": [96, 128, 192, 256, 384, 512],
+              "type": "image/png"
+            }
+          ]
+        }
+      }
+    },
+    "experiments": {
+      "baseUrl": "/koala-tenis-score"
+    },
+    "plugins": [
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["peripheral", "central"],
+          "bluetoothAlwaysPermission": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar."
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-9278504866264813~1533643321",
+          "iosAppId": "ca-app-pub-9278504866264813~1533643321"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "8f2ccb0c-00ad-4e14-a4bb-5d9c72b44e74"
+      }
     }
   }
 }
