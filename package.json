@@ -28,7 +28,7 @@
     "web": "expo start --web",
     "build:web": "expo export --platform web && node copy-public.js",
     "predeploy": "npm run build:web",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -t -d dist"
   },
   "private": true
 }
