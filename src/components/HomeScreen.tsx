@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   menuContainer: {
     flex: 1,
     justifyContent: 'center',
-    gap: 16,
+    gap: 10,
     marginBottom: 30,
   },
   menuItem: {
