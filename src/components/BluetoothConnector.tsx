@@ -498,56 +498,6 @@ export default function BluetoothConnector({
         </View>
       </View>
 
-      {/* Simulated smartwatch / BLE Buttons Panel */}
-      <View style={styles.simCard}>
-        <View style={styles.simHeader}>
-          <Ionicons name="phone-portrait-outline" size={20} color="#ccff00" />
-          <Text style={styles.simTitle}>{t.simTitle}</Text>
-        </View>
-        <Text style={styles.simDesc}>
-          {t.simDesc}
-          {connectionState !== 'connected' && (
-            <Text style={{ color: '#ef4444', fontWeight: 'bold' }}>
-              {t.simError}
-            </Text>
-          )}
-        </Text>
-
-        <View style={styles.simGrid}>
-          {Array.from({ length: 9 }).map((_, i) => {
-            const btnId = String(i + 1);
-            const mappedAction = buttonMappings[btnId] || 'none';
-            const isP1 = mappedAction === 'addPointP1';
-            const isP2 = mappedAction === 'addPointP2';
-            
-            return (
-              <TouchableOpacity
-                key={btnId}
-                style={[
-                  styles.simGridBtn,
-                  isP1 && styles.simBtnP1,
-                  isP2 && styles.simBtnP2,
-                  connectionState !== 'connected' && styles.disabledBtn,
-                ]}
-                onPress={() => bleService.simulateButtonPress(btnId)}
-                disabled={connectionState !== 'connected'}
-              >
-                <Text style={styles.simGridBtnText}>{btnId}</Text>
-                <Text style={styles.simGridBtnLabel} numberOfLines={1}>
-                  {mappedAction === 'addPointP1' && 'P1'}
-                  {mappedAction === 'addPointP2' && 'P2'}
-                  {mappedAction === 'undo' && 'Voltar'}
-                  {mappedAction === 'reset' && 'Reset'}
-                  {mappedAction === 'toggleMute' && 'Muto'}
-                  {mappedAction === 'announceScore' && 'Falar'}
-                  {mappedAction === 'toggleSide' && 'Lado'}
-                  {mappedAction === 'none' && '-'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
 
       {/* Physical Remote Mapping Panel */}
       <View style={styles.configCard}>
