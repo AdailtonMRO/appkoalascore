@@ -212,7 +212,7 @@ export default function MatchSetup({
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       {/* Top navigation Back button */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backButton} onPress={onBack}>
