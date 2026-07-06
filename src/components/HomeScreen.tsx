@@ -9,6 +9,7 @@ import {
   Linking,
   BackHandler,
   Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BleConnectionState } from '../services/bleService';
@@ -23,6 +24,50 @@ import {
 const NATIVE_AD_UNIT_ID = __DEV__
   ? TestIds.NATIVE
   : 'ca-app-pub-9278504866264813/9550858432';
+
+// Component to inject and render AdSense in web builds
+function WebAdSense({ adClient, adSlot }: { adClient: string; adSlot: string }) {
+  React.useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    try {
+      // Injetar script do AdSense se já não estiver na página
+      if (!document.getElementById('adsense-script')) {
+        const script = document.createElement('script');
+        script.id = 'adsense-script';
+        script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adClient}`;
+        script.async = true;
+        script.crossOrigin = 'anonymous';
+        document.head.appendChild(script);
+      }
+      
+      // Inicializar anúncio
+      // @ts-ignore
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch (e) {
+      console.warn('Google AdSense load error:', e);
+    }
+  }, [adClient, adSlot]);
+
+  if (Platform.OS !== 'web') return null;
+
+  return (
+    <View style={styles.adSenseContainer}>
+      <div
+        style={{ width: '100%', height: 90, overflow: 'hidden', alignSelf: 'stretch', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+        dangerouslySetInnerHTML={{
+          __html: `
+            <ins class="adsbygoogle"
+                 style="display:block;width:100%;height:90px;"
+                 data-ad-client="${adClient}"
+                 data-ad-slot="${adSlot}"
+                 data-ad-format="horizontal"
+                 data-full-width-responsive="true"></ins>
+          `
+        }}
+      />
+    </View>
+  );
+}
 
 interface HomeScreenProps {
   onNavigate: (screen: 'setup' | 'remote' | 'history' | 'multiplayer_setup' | 'help') => void;
@@ -51,6 +96,11 @@ export default function HomeScreen({
     let loadedAd: NativeAd | null = null;
 
     const loadNativeAd = async () => {
+      if (Platform.OS === 'web') {
+        setAdLoaded(true);
+        setAdFailed(false);
+        return;
+      }
       try {
         console.log('Starting to load Native Ad with ID:', NATIVE_AD_UNIT_ID);
         const ad = await NativeAd.createForAdRequest(NATIVE_AD_UNIT_ID);
@@ -349,28 +399,30 @@ export default function HomeScreen({
         )}
 
         {/* Exit App Option */}
-        <TouchableOpacity 
-          style={[styles.menuItem, { borderColor: 'rgba(239, 68, 68, 0.2)', marginTop: 8 }]} 
-          onPress={() => {
-            Alert.alert(
-              t.exitAlertTitle,
-              t.exitAlertMsg,
-              [
-                { text: t.exitAlertCancel, style: 'cancel' },
-                { text: t.exitAlertConfirm, onPress: () => BackHandler.exitApp() }
-              ]
-            );
-          }}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#ef4444' }]}>
-            <Ionicons name="power" size={24} color="#fff" />
-          </View>
-          <View style={styles.menuTextCol}>
-            <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>{t.exitBtn}</Text>
-            <Text style={styles.menuItemDesc}>{t.exitDesc}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#ef4444" />
-        </TouchableOpacity>
+        {Platform.OS !== 'web' && (
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderColor: 'rgba(239, 68, 68, 0.2)', marginTop: 8 }]} 
+            onPress={() => {
+              Alert.alert(
+                t.exitAlertTitle,
+                t.exitAlertMsg,
+                [
+                  { text: t.exitAlertCancel, style: 'cancel' },
+                  { text: t.exitAlertConfirm, onPress: () => BackHandler.exitApp() }
+                ]
+              );
+            }}
+          >
+            <View style={[styles.iconWrapper, { backgroundColor: '#ef4444' }]}>
+              <Ionicons name="power" size={24} color="#fff" />
+            </View>
+            <View style={styles.menuTextCol}>
+              <Text style={[styles.menuItemTitle, { color: '#ef4444' }]}>{t.exitBtn}</Text>
+              <Text style={styles.menuItemDesc}>{t.exitDesc}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#ef4444" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Advertising / Sponsors Area */}
@@ -389,55 +441,62 @@ export default function HomeScreen({
           <Ionicons name="open-outline" size={16} color="#ccff00" />
         </TouchableOpacity>
 
-        {/* Space for AdMob Native Ad */}
-        {(!adFailed && nativeAd) ? (
-          <NativeAdView
-            nativeAd={nativeAd}
-            style={styles.adContainer}
-          >
-            <View style={styles.adContent}>
-              <View style={styles.adHeader}>
-                {nativeAd.icon && (
-                  <NativeAsset assetType={NativeAssetType.ICON}>
-                    <Image style={styles.adIcon} source={{ uri: nativeAd.icon.url }} />
-                  </NativeAsset>
-                )}
-                <View style={styles.adTextContainer}>
-                  <NativeAsset assetType={NativeAssetType.HEADLINE}>
-                    <Text style={styles.adHeadline}>{nativeAd.headline}</Text>
-                  </NativeAsset>
-                  {nativeAd.advertiser && (
-                    <NativeAsset assetType={NativeAssetType.ADVERTISER}>
-                      <Text style={styles.adAdvertiser}>{nativeAd.advertiser}</Text>
+        {/* Ad Space: AdSense on Web, AdMob on Mobile */}
+        {Platform.OS === 'web' ? (
+          <WebAdSense adClient="ca-pub-9278504866264813" adSlot="9550858432" />
+        ) : (
+          <>
+            {/* Space for AdMob Native Ad */}
+            {(!adFailed && nativeAd) ? (
+              <NativeAdView
+                nativeAd={nativeAd}
+                style={styles.adContainer}
+              >
+                <View style={styles.adContent}>
+                  <View style={styles.adHeader}>
+                    {nativeAd.icon && (
+                      <NativeAsset assetType={NativeAssetType.ICON}>
+                        <Image style={styles.adIcon} source={{ uri: nativeAd.icon.url }} />
+                      </NativeAsset>
+                    )}
+                    <View style={styles.adTextContainer}>
+                      <NativeAsset assetType={NativeAssetType.HEADLINE}>
+                        <Text style={styles.adHeadline}>{nativeAd.headline}</Text>
+                      </NativeAsset>
+                      {nativeAd.advertiser && (
+                        <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+                          <Text style={styles.adAdvertiser}>{nativeAd.advertiser}</Text>
+                        </NativeAsset>
+                      )}
+                    </View>
+                    <View style={styles.adBadge}>
+                      <Text style={styles.adBadgeText}>Ad</Text>
+                    </View>
+                  </View>
+                  {nativeAd.body && (
+                    <NativeAsset assetType={NativeAssetType.BODY}>
+                      <Text style={styles.adTagline}>{nativeAd.body}</Text>
+                    </NativeAsset>
+                  )}
+                  {nativeAd.callToAction && (
+                    <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+                      <View style={styles.adCta}>
+                        <Text style={styles.adCtaText}>{nativeAd.callToAction}</Text>
+                      </View>
                     </NativeAsset>
                   )}
                 </View>
-                <View style={styles.adBadge}>
-                  <Text style={styles.adBadgeText}>Ad</Text>
-                </View>
-              </View>
-              {nativeAd.body && (
-                <NativeAsset assetType={NativeAssetType.BODY}>
-                  <Text style={styles.adTagline}>{nativeAd.body}</Text>
-                </NativeAsset>
-              )}
-              {nativeAd.callToAction && (
-                <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
-                  <View style={styles.adCta}>
-                    <Text style={styles.adCtaText}>{nativeAd.callToAction}</Text>
-                  </View>
-                </NativeAsset>
-              )}
-            </View>
-          </NativeAdView>
-        ) : null}
+              </NativeAdView>
+            ) : null}
 
-        {/* Space for future ads (fallback/placeholder when AdMob is loading or failed) */}
-        {(!adLoaded || adFailed) && (
-          <View style={styles.adPlaceholder}>
-            <Ionicons name="megaphone-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
-            <Text style={styles.adPlaceholderText}>{t.adPlaceholderText}</Text>
-          </View>
+            {/* Space for future ads (fallback/placeholder when AdMob is loading or failed) */}
+            {(!adLoaded || adFailed) && (
+              <View style={styles.adPlaceholder}>
+                <Ionicons name="megaphone-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
+                <Text style={styles.adPlaceholderText}>{t.adPlaceholderText}</Text>
+              </View>
+            )}
+          </>
         )}
       </View>
 
@@ -470,8 +529,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   logoImage: {
-    width: 338,
-    height: 169,
+    width: 237,
+    height: 118,
     marginBottom: 4,
   },
   logoContainer: {
@@ -488,6 +547,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.15,
     shadowRadius: 16,
+  },
+  adSenseContainer: {
+    width: '100%',
+    height: 90,
+    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 10,
+    overflow: 'hidden',
   },
   ballLogo: {
     textShadowColor: 'rgba(204, 255, 0, 0.4)',

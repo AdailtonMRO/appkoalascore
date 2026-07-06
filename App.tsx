@@ -25,10 +25,16 @@ import {
 import { MultiplayerSessionState } from './src/utils/multiplayerEngine';
 import { SpeechService } from './src/services/speechService';
 import { bleService, BleConnectionState } from './src/services/bleService';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import mobileAds from 'react-native-google-mobile-ads';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
+
   const [screen, setScreen] = useState<
     'home' | 'setup' | 'remote' | 'game' | 'history' | 'multiplayer_setup' | 'multiplayer_game' | 'multiplayer_ranking' | 'help'
   >('home');
@@ -277,6 +283,10 @@ export default function App() {
       SpeechService.speak(startTexts[language] || startTexts.pt, language);
     }
   };
+
+  if (!fontsLoaded) {
+    return null;
+  }
 
   return (
     <SafeAreaView style={styles.container}>
