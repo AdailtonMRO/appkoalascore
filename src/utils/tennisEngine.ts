@@ -239,6 +239,7 @@ export function addPoint(state: MatchState, scorer: 1 | 2): MatchState {
   const historyCopy = [...state.history, copyStateForHistory(state)];
   let newState: MatchState = {
     ...state,
+    setScores: state.setScores.map(score => ({ ...score })),
     history: historyCopy,
   };
 
