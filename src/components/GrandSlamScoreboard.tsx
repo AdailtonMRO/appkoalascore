@@ -73,10 +73,10 @@ export default function GrandSlamScoreboard({
 
   // DYNAMIC SIZES (Where size values are adjusted dynamically according to window dimensions)
   const headerFontSize = isLandscape ? Math.max(height * 0.026, 9) : Math.max(width * 0.024, 9);
-  const nameFontSize = isLandscape ? Math.max(height * 0.05, 14) : Math.max(width * 0.046, 12);
+  const nameFontSize = isLandscape ? Math.max(height * 0.07, 18) : Math.max(width * 0.06, 15);
   const nameSubFontSize = nameFontSize * 0.65;
-  const pointsFontSize = isLandscape ? Math.max(height * 0.09, 18) : Math.max(width * 0.075, 16);
-  const setScoreFontSize = isLandscape ? Math.max(height * 0.08, 16) : Math.max(width * 0.07, 14);
+  const pointsFontSize = isLandscape ? Math.max(height * 0.15, 26) : Math.max(width * 0.11, 22);
+  const setScoreFontSize = isLandscape ? Math.max(height * 0.13, 22) : Math.max(width * 0.10, 18);
 
   return (
     <View style={styles.outerContainer}>
@@ -327,15 +327,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   playerColumn: {
-    flex: 3,
+    flex: 2, // Reduced from 3 to give more space to points/sets
     textAlign: 'left',
     paddingLeft: 6,
   },
   pointsColumn: {
-    flex: 1.2,
+    flex: 1.6, // Increased from 1.2
   },
   setColumn: {
-    flex: 0.8,
+    flex: 1.1, // Increased from 0.8
   },
   gridPlayerRow: {
     flex: 1, // Flex rows to share the remaining height inside gridContainer equally
