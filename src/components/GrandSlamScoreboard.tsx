@@ -88,10 +88,7 @@ export default function GrandSlamScoreboard({
         </View>
 
         <View style={styles.headerCenter}>
-          <Text style={[styles.courtName, { fontSize: headerFontSize * 0.9 }]}>{t.court}</Text>
-          <View style={styles.sponsorRow}>
-            <Text style={[styles.sponsorBrand, { fontSize: headerFontSize * 0.65 }]}>ROLEX</Text>
-          </View>
+          <Text style={[styles.courtName, { fontSize: headerFontSize * 1.1, color: '#ccff00', fontWeight: '900', letterSpacing: 2.5 }]}>KOALA PLACAR</Text>
         </View>
 
         <View style={styles.headerRight}>
