@@ -66,7 +66,7 @@ export default function GrandSlamScoreboard({
     config.noAdScoring
   );
 
-  const playersOrder: (1 | 2)[] = matchState.courtSideSwapped ? [2, 1] : [1, 2];
+  const playersOrder: (1 | 2)[] = [1, 2];
 
   const maxSets = config.setsToWin * 2 - 1;
   const setColumns = Array.from({ length: maxSets }, (_, i) => i);
