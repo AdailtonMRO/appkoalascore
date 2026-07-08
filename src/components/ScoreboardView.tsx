@@ -10,9 +10,11 @@ import {
   TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MatchState, getDisplayPoints, isServingFromDeuceCourt, calculateMatchStats } from '../utils/tennisEngine';
 import { SpeechService } from '../services/speechService';
 import { historyService } from '../services/historyService';
+import GrandSlamScoreboard from './GrandSlamScoreboard';
 
 interface ScoreboardViewProps {
   matchState: MatchState;
@@ -39,6 +41,70 @@ export default function ScoreboardView({
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isSaved, setIsSaved] = useState(false);
+
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [currentTime, setCurrentTime] = useState('');
+  const [scoreboardMode, setScoreboardMode] = useState<'classic' | 'grandslam'>(
+    width >= 768 ? 'grandslam' : 'classic'
+  );
+
+  // Load preferred mode
+  useEffect(() => {
+    const loadMode = async () => {
+      try {
+        const saved = await AsyncStorage.getItem('@koala_scoreboard_mode');
+        if (saved === 'classic' || saved === 'grandslam') {
+          setScoreboardMode(saved);
+        }
+      } catch (e) {}
+    };
+    loadMode();
+  }, []);
+
+  const toggleScoreboardMode = async () => {
+    const nextMode = scoreboardMode === 'classic' ? 'grandslam' : 'classic';
+    setScoreboardMode(nextMode);
+    try {
+      await AsyncStorage.setItem('@koala_scoreboard_mode', nextMode);
+    } catch (e) {}
+  };
+
+  // Elapsed Match Timer and Real-Time Clock
+  useEffect(() => {
+    // 1. Current Time Clock
+    const updateTime = () => {
+      const now = new Date();
+      let hours = now.getHours();
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const timeStr = `${hours}:${minutes}`;
+      setCurrentTime(timeStr);
+    };
+    updateTime();
+    const timeInterval = setInterval(updateTime, 30000); // update every 30s
+
+    // 2. Elapsed Match Timer
+    let matchTimer: any;
+    if (winner === null) {
+      matchTimer = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+
+    return () => {
+      clearInterval(timeInterval);
+      if (matchTimer) clearInterval(matchTimer);
+    };
+  }, [winner]);
+
+  const formatElapsed = (totalSecs: number) => {
+    const h = Math.floor(totalSecs / 3600);
+    const m = Math.floor((totalSecs % 3600) / 60);
+    const s = totalSecs % 60;
+    if (h > 0) {
+      return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
 
   // Gesture Responder references and handlers to support Beauty-R1 remote swipes
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -363,31 +429,64 @@ export default function ScoreboardView({
       onMoveShouldSetResponderCapture={handleMoveShouldSetResponderCapture}
       onResponderRelease={handleResponderRelease}
     >
-      {/* Set Scores Summary */}
-      <View style={[styles.header, isLandscape && styles.headerLandscape]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <Text style={styles.matchFormatText}>
-            {isMatchTieBreak
-              ? t.superTB
-              : isTieBreak
-              ? t.tb
-              : `${t.set} ${currentSetIndex + 1} • ${t.bestOf} ${config.setsToWin * 2 - 1}`}
+      {/* Layout Mode Selector (Always visible to allow selection) */}
+      <View style={styles.modeSelectorRow}>
+        <TouchableOpacity 
+          style={[styles.modeToggleBtn, scoreboardMode === 'classic' && styles.modeToggleBtnActive]} 
+          onPress={() => toggleScoreboardMode()}
+        >
+          <Text style={[styles.modeToggleText, scoreboardMode === 'classic' && styles.modeToggleTextActive]}>
+            {config.language === 'pt' ? 'Resumido' : 'Classic'}
           </Text>
-          <TouchableOpacity onPress={onToggleMute} style={{ padding: 4, marginTop: -8 }}>
-            <Ionicons 
-              name={isVoiceMuted ? "volume-mute" : "volume-high"} 
-              size={18} 
-              color={isVoiceMuted ? "#ef4444" : "#ccff00"} 
-            />
-          </TouchableOpacity>
-        </View>
-        {renderSetScores()}
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.modeToggleBtn, scoreboardMode === 'grandslam' && styles.modeToggleBtnActive]} 
+          onPress={() => toggleScoreboardMode()}
+        >
+          <Text style={[styles.modeToggleText, scoreboardMode === 'grandslam' && styles.modeToggleTextActive]}>
+            {config.language === 'pt' ? 'Completo (Grand Slam)' : 'Grand Slam'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Main Scoreboard panels */}
-      <View style={[styles.scoreboardWrapper, isLandscape && styles.scoreboardWrapperLandscape]}>
-        {matchState.courtSideSwapped ? [player2Card, player1Card] : [player1Card, player2Card]}
-      </View>
+      {scoreboardMode === 'grandslam' ? (
+        <GrandSlamScoreboard
+          matchState={matchState}
+          onAddPoint={onAddPoint}
+          currentTime={currentTime}
+          elapsedTime={formatElapsed(elapsedSeconds)}
+          isVoiceMuted={isVoiceMuted}
+          onToggleMute={onToggleMute}
+        />
+      ) : (
+        <>
+          {/* Set Scores Summary */}
+          <View style={[styles.header, isLandscape && styles.headerLandscape]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={styles.matchFormatText}>
+                {isMatchTieBreak
+                  ? t.superTB
+                  : isTieBreak
+                  ? t.tb
+                  : `${t.set} ${currentSetIndex + 1} • ${t.bestOf} ${config.setsToWin * 2 - 1}`}
+              </Text>
+              <TouchableOpacity onPress={onToggleMute} style={{ padding: 4, marginTop: -8 }}>
+                <Ionicons 
+                  name={isVoiceMuted ? "volume-mute" : "volume-high"} 
+                  size={18} 
+                  color={isVoiceMuted ? "#ef4444" : "#ccff00"} 
+                />
+              </TouchableOpacity>
+            </View>
+            {renderSetScores()}
+          </View>
+
+          {/* Main Scoreboard panels */}
+          <View style={[styles.scoreboardWrapper, isLandscape && styles.scoreboardWrapperLandscape]}>
+            {matchState.courtSideSwapped ? [player2Card, player1Card] : [player1Card, player2Card]}
+          </View>
+        </>
+      )}
 
       {/* Serving side indicator & Winner Overlay & Control Buttons */}
       <View style={[styles.footerContainer, isLandscape && styles.footerContainerLandscape]}>
@@ -879,5 +978,32 @@ const styles = StyleSheet.create({
   },
   disabledText: {
     color: '#475569',
+  },
+  modeSelectorRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderRadius: 8,
+    padding: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    marginBottom: 8,
+  },
+  modeToggleBtn: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  modeToggleBtnActive: {
+    backgroundColor: '#ccff00',
+  },
+  modeToggleText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  modeToggleTextActive: {
+    color: '#0f172a',
   },
 });
