@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { MatchState, getDisplayPoints } from '../utils/tennisEngine';
@@ -27,6 +28,8 @@ export default function GrandSlamScoreboard({
   onToggleMute,
 }: GrandSlamScoreboardProps) {
   const { config, setScores, currentSetIndex, isTieBreak, isMatchTieBreak, server, winner } = matchState;
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   // Localized Labels
   const labels = {
@@ -68,29 +71,36 @@ export default function GrandSlamScoreboard({
   const maxSets = config.setsToWin * 2 - 1;
   const setColumns = Array.from({ length: maxSets }, (_, i) => i);
 
+  // DYNAMIC SIZES (Where size values are adjusted dynamically according to window dimensions)
+  const headerFontSize = isLandscape ? Math.max(height * 0.026, 9) : Math.max(width * 0.024, 9);
+  const nameFontSize = isLandscape ? Math.max(height * 0.05, 14) : Math.max(width * 0.046, 12);
+  const nameSubFontSize = nameFontSize * 0.65;
+  const pointsFontSize = isLandscape ? Math.max(height * 0.09, 18) : Math.max(width * 0.075, 16);
+  const setScoreFontSize = isLandscape ? Math.max(height * 0.08, 16) : Math.max(width * 0.07, 14);
+
   return (
     <View style={styles.outerContainer}>
       {/* 1. Header (Time, Location/Rolex, Match Timer) */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <Ionicons name="time-outline" size={14} color="#a1a1aa" style={{ marginRight: 4 }} />
-          <Text style={styles.headerText}>{currentTime}</Text>
+          <Ionicons name="time-outline" size={headerFontSize} color="#a1a1aa" style={{ marginRight: 4 }} />
+          <Text style={[styles.headerText, { fontSize: headerFontSize }]}>{currentTime}</Text>
         </View>
 
         <View style={styles.headerCenter}>
-          <Text style={styles.courtName}>{t.court}</Text>
+          <Text style={[styles.courtName, { fontSize: headerFontSize * 0.9 }]}>{t.court}</Text>
           <View style={styles.sponsorRow}>
-            <Text style={styles.sponsorBrand}>ROLEX</Text>
+            <Text style={[styles.sponsorBrand, { fontSize: headerFontSize * 0.65 }]}>ROLEX</Text>
           </View>
         </View>
 
         <View style={styles.headerRight}>
-          <Text style={styles.elapsedLabel}>MATCH TIME</Text>
-          <Text style={styles.elapsedValue}>{elapsedTime}</Text>
+          <Text style={[styles.elapsedLabel, { fontSize: headerFontSize * 0.65 }]}>MATCH TIME</Text>
+          <Text style={[styles.elapsedValue, { fontSize: headerFontSize }]}>{elapsedTime}</Text>
           <TouchableOpacity onPress={onToggleMute} style={styles.muteButton}>
             <Ionicons 
               name={isVoiceMuted ? "volume-mute" : "volume-high"} 
-              size={14} 
+              size={headerFontSize} 
               color={isVoiceMuted ? "#ef4444" : "#02c39a"} 
             />
           </TouchableOpacity>
@@ -101,10 +111,10 @@ export default function GrandSlamScoreboard({
       <View style={styles.gridContainer}>
         {/* Header Titles */}
         <View style={styles.gridHeaderRow}>
-          <Text style={[styles.columnHeader, styles.playerColumn]}>PLAYER</Text>
-          <Text style={[styles.columnHeader, styles.pointsColumn]}>{t.points}</Text>
+          <Text style={[styles.columnHeader, styles.playerColumn, { fontSize: headerFontSize }]}>PLAYER</Text>
+          <Text style={[styles.columnHeader, styles.pointsColumn, { fontSize: headerFontSize }]}>{t.points}</Text>
           {setColumns.map((idx) => (
-            <Text key={idx} style={[styles.columnHeader, styles.setColumn]}>
+            <Text key={idx} style={[styles.columnHeader, styles.setColumn, { fontSize: headerFontSize }]}>
               {idx + 1}
             </Text>
           ))}
@@ -145,19 +155,19 @@ export default function GrandSlamScoreboard({
                   )}
                 </View>
                 <View style={styles.playerIdentity}>
-                  <Text style={styles.playerNameContainer} numberOfLines={1}>
+                  <Text style={[styles.playerNameContainer, { fontSize: nameFontSize }]} numberOfLines={1}>
                     {parsed.first ? <Text style={styles.playerFirstName}>{parsed.first} </Text> : null}
                     <Text style={styles.playerLastName}>{parsed.last}</Text>
                   </Text>
                   {country || seed ? (
-                    <Text style={styles.playerSubDetails}>
+                    <Text style={[styles.playerSubDetails, { fontSize: nameSubFontSize }]}>
                       {country ? <Text style={styles.countryCode}>{country}</Text> : null}
                       {seed ? <Text style={styles.seedText}> ({seed})</Text> : null}
                     </Text>
                   ) : null}
                 </View>
                 {isWinner && (
-                  <Ionicons name="trophy" size={14} color="#eab308" style={styles.rowTrophy} />
+                  <Ionicons name="trophy" size={nameFontSize} color="#eab308" style={styles.rowTrophy} />
                 )}
               </View>
 
@@ -166,7 +176,8 @@ export default function GrandSlamScoreboard({
                 <Text style={[
                   styles.pointsText, 
                   isServing && styles.activePointsText,
-                  (pointsDisplay === 'AD' || pointsDisplay === 'A') && styles.advantageText
+                  (pointsDisplay === 'AD' || pointsDisplay === 'A') && styles.advantageText,
+                  { fontSize: pointsFontSize }
                 ]}>
                   {pointsDisplay}
                 </Text>
@@ -200,7 +211,8 @@ export default function GrandSlamScoreboard({
                     <Text style={[
                       styles.setScoreText,
                       isCurrentSet && styles.activeSetScoreText,
-                      isSetFinished && styles.pastSetScoreText
+                      isSetFinished && styles.pastSetScoreText,
+                      { fontSize: setScoreFontSize }
                     ]}>
                       {games}
                       {tieBreakPoints !== undefined ? (
@@ -220,17 +232,19 @@ export default function GrandSlamScoreboard({
 
 const styles = StyleSheet.create({
   outerContainer: {
+    flex: 1, // Dynamically fill the entire remaining vertical space
     backgroundColor: '#0a1c12', // Grand Slam deep Rolex-style forest green
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: '#0b5930', // Deep gold-green border
     padding: 12,
-    marginVertical: 10,
+    marginVertical: 4,
     width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
+    justifyContent: 'space-between',
   },
   headerRow: {
     flexDirection: 'row',
@@ -248,7 +262,6 @@ const styles = StyleSheet.create({
   },
   headerText: {
     color: '#cbd5e1',
-    fontSize: 12,
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
@@ -258,7 +271,6 @@ const styles = StyleSheet.create({
   },
   courtName: {
     color: '#ccff00', // Neon highlight
-    fontSize: 10,
     fontWeight: '900',
     letterSpacing: 2,
     textTransform: 'uppercase',
@@ -273,7 +285,6 @@ const styles = StyleSheet.create({
   },
   sponsorBrand: {
     color: '#ffffff',
-    fontSize: 7,
     fontWeight: '900',
     letterSpacing: 2.5,
   },
@@ -286,13 +297,11 @@ const styles = StyleSheet.create({
   },
   elapsedLabel: {
     color: '#64748b',
-    fontSize: 7,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   elapsedValue: {
     color: '#ffffff',
-    fontSize: 11,
     fontWeight: '800',
     fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
   },
@@ -300,6 +309,7 @@ const styles = StyleSheet.create({
     padding: 2,
   },
   gridContainer: {
+    flex: 1, // Dynamically fill vertical space within the outerContainer
     flexDirection: 'column',
     width: '100%',
   },
@@ -312,7 +322,6 @@ const styles = StyleSheet.create({
   },
   columnHeader: {
     color: '#475569',
-    fontSize: 9,
     fontWeight: '800',
     textAlign: 'center',
     letterSpacing: 1,
@@ -329,6 +338,7 @@ const styles = StyleSheet.create({
     flex: 0.8,
   },
   gridPlayerRow: {
+    flex: 1, // Flex rows to share the remaining height inside gridContainer equally
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#0c2e1c', // Deep forest background
@@ -337,7 +347,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'transparent',
     overflow: 'hidden',
-    height: 52,
+    minHeight: 52, // Ensure a minimum height exists
   },
   servingPlayerRow: {
     borderColor: '#02c39a', // Luminous glow for server
@@ -359,9 +369,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   luminousServeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#ccff00', // Luminous neon green dot
     shadowColor: '#ccff00',
     shadowOffset: { width: 0, height: 0 },
@@ -376,7 +386,6 @@ const styles = StyleSheet.create({
   },
   playerNameContainer: {
     color: '#ffffff',
-    fontSize: 14,
   },
   playerFirstName: {
     fontWeight: '300',
@@ -387,7 +396,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   playerSubDetails: {
-    fontSize: 9,
     fontWeight: '700',
     color: '#64748b',
     marginTop: 1.5,
@@ -413,12 +421,10 @@ const styles = StyleSheet.create({
   },
   pointsText: {
     color: '#a1a1aa',
-    fontSize: 16,
     fontWeight: '800',
   },
   activePointsText: {
     color: '#ccff00', // Gold/yellow active points
-    fontSize: 18,
     fontWeight: '900',
   },
   advantageText: {
@@ -426,12 +432,10 @@ const styles = StyleSheet.create({
   },
   setScoreText: {
     color: '#64748b',
-    fontSize: 14,
     fontWeight: '700',
   },
   activeSetScoreText: {
     color: '#ffffff', // Current set is bright white
-    fontSize: 16,
     fontWeight: '900',
   },
   pastSetScoreText: {
