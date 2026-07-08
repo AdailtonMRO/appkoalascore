@@ -100,14 +100,15 @@ export default function App() {
       }
       link.href = './manifest.json';
 
-      // Prevent body scroll bug on focus and allow scrolling on mobile browsers
+      // Prevent body scroll bug on focus, eliminate white borders and allow scrolling on mobile browsers
       const style = document.createElement('style');
       style.innerHTML = `
-        html, body {
-          width: 100%;
-          height: 100%;
-          margin: 0;
-          padding: 0;
+        html, body, #root, [data-reactroot] {
+          width: 100% !important;
+          height: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          background-color: #090d16 !important;
           overflow-y: auto;
           overflow-x: hidden;
           -webkit-overflow-scrolling: touch;

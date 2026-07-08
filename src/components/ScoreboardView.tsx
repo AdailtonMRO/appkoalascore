@@ -536,12 +536,12 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    padding: 16,
+    padding: Platform.OS === 'web' ? 4 : 16,
     backgroundColor: '#090d16',
     justifyContent: 'space-between',
   },
   containerLandscape: {
-    padding: 8,
+    padding: Platform.OS === 'web' ? 2 : 8,
   },
   header: {
     alignItems: 'center',
@@ -620,14 +620,14 @@ const styles = StyleSheet.create({
   },
   scoreboardWrapper: {
     flex: 1,
-    marginVertical: 16,
+    marginVertical: Platform.OS === 'web' ? 4 : 16,
     justifyContent: 'center',
-    gap: 16,
+    gap: Platform.OS === 'web' ? 6 : 16,
   },
   scoreboardWrapperLandscape: {
     flexDirection: 'row',
-    marginVertical: 4,
-    gap: 8,
+    marginVertical: Platform.OS === 'web' ? 2 : 4,
+    gap: Platform.OS === 'web' ? 4 : 8,
   },
   playerCard: {
     flex: 1,
@@ -635,7 +635,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
-    padding: 16,
+    padding: Platform.OS === 'web' ? 8 : 16,
     justifyContent: 'space-between',
     position: 'relative',
     shadowColor: '#000',
@@ -645,7 +645,7 @@ const styles = StyleSheet.create({
   },
   playerCardLandscape: {
     borderRadius: 12,
-    padding: 8,
+    padding: Platform.OS === 'web' ? 4 : 8,
   },
   playerCardP1: {
     borderLeftWidth: 4,
