@@ -29,10 +29,6 @@ export default function MatchSetup({
 }: MatchSetupProps) {
   const [player1Name, setPlayer1Name] = useState(initialConfig.player1Name);
   const [player2Name, setPlayer2Name] = useState(initialConfig.player2Name);
-  const [player1Country, setPlayer1Country] = useState(initialConfig.player1Country || '');
-  const [player2Country, setPlayer2Country] = useState(initialConfig.player2Country || '');
-  const [player1Seed, setPlayer1Seed] = useState(initialConfig.player1Seed || '');
-  const [player2Seed, setPlayer2Seed] = useState(initialConfig.player2Seed || '');
   const [setsToWin, setSetsToWin] = useState<number>(initialConfig.setsToWin);
   const [gamesPerSet, setGamesPerSet] = useState<number>(initialConfig.gamesPerSet);
   const [noAdScoring, setNoAdScoring] = useState<boolean>(initialConfig.noAdScoring);
@@ -55,10 +51,6 @@ export default function MatchSetup({
           const parsed = JSON.parse(saved);
           if (parsed.player1Name !== undefined) setPlayer1Name(parsed.player1Name);
           if (parsed.player2Name !== undefined) setPlayer2Name(parsed.player2Name);
-          if (parsed.player1Country !== undefined) setPlayer1Country(parsed.player1Country);
-          if (parsed.player2Country !== undefined) setPlayer2Country(parsed.player2Country);
-          if (parsed.player1Seed !== undefined) setPlayer1Seed(parsed.player1Seed);
-          if (parsed.player2Seed !== undefined) setPlayer2Seed(parsed.player2Seed);
           if (parsed.setsToWin !== undefined) setSetsToWin(parsed.setsToWin);
           if (parsed.gamesPerSet !== undefined) setGamesPerSet(parsed.gamesPerSet);
           if (parsed.noAdScoring !== undefined) setNoAdScoring(parsed.noAdScoring);
@@ -206,10 +198,6 @@ export default function MatchSetup({
     const finalConfig: TennisConfig = {
       player1Name: player1Name.trim() || (language === 'pt' ? 'Jogador 1' : language === 'en' ? 'Player 1' : 'Jugador 1'),
       player2Name: player2Name.trim() || (language === 'pt' ? 'Jogador 2' : language === 'en' ? 'Player 2' : 'Jugador 2'),
-      player1Country: player1Country.trim().toUpperCase() || undefined,
-      player2Country: player2Country.trim().toUpperCase() || undefined,
-      player1Seed: player1Seed.trim() || undefined,
-      player2Seed: player2Seed.trim() || undefined,
       setsToWin,
       gamesPerSet,
       useTieBreak,
@@ -269,39 +257,6 @@ export default function MatchSetup({
           </View>
         </View>
 
-        <View style={[styles.rowContainer, { marginBottom: 16 }]}>
-          <View style={styles.halfInputContainer}>
-            <Text style={styles.inputLabel}>{t.p1CountryLabel}</Text>
-            <View style={styles.textInputWrapper}>
-              <Ionicons name="flag" size={18} color="#06b6d4" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={player1Country}
-                onChangeText={setPlayer1Country}
-                placeholder="Ex: BRA"
-                placeholderTextColor="#64748b"
-                maxLength={3}
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
-
-          <View style={styles.halfInputContainer}>
-            <Text style={styles.inputLabel}>{t.p1SeedLabel}</Text>
-            <View style={styles.textInputWrapper}>
-              <Ionicons name="ribbon-outline" size={18} color="#06b6d4" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={player1Seed}
-                onChangeText={setPlayer1Seed}
-                placeholder="Ex: 8"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
-        </View>
-
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>{t.p2Label}</Text>
           <View style={styles.textInputWrapper}>
@@ -313,39 +268,6 @@ export default function MatchSetup({
               placeholder={t.p2Placeholder}
               placeholderTextColor="#64748b"
             />
-          </View>
-        </View>
-
-        <View style={[styles.rowContainer, { marginBottom: 16 }]}>
-          <View style={styles.halfInputContainer}>
-            <Text style={styles.inputLabel}>{t.p2CountryLabel}</Text>
-            <View style={styles.textInputWrapper}>
-              <Ionicons name="flag" size={18} color="#f97316" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={player2Country}
-                onChangeText={setPlayer2Country}
-                placeholder="Ex: KOR"
-                placeholderTextColor="#64748b"
-                maxLength={3}
-                autoCapitalize="characters"
-              />
-            </View>
-          </View>
-
-          <View style={styles.halfInputContainer}>
-            <Text style={styles.inputLabel}>{t.p2SeedLabel}</Text>
-            <View style={styles.textInputWrapper}>
-              <Ionicons name="ribbon-outline" size={18} color="#f97316" style={styles.inputIcon} />
-              <TextInput
-                style={styles.textInput}
-                value={player2Seed}
-                onChangeText={setPlayer2Seed}
-                placeholder="Ex: 1"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-              />
-            </View>
           </View>
         </View>
 

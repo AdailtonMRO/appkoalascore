@@ -48,6 +48,33 @@ export default function ScoreboardView({
     width >= 768 ? 'grandslam' : 'classic'
   );
 
+  const [gameDurations, setGameDurations] = useState<number[]>([]);
+  const lastTotalGamesRef = useRef(0);
+
+  const getTotalGames = (state: MatchState) => {
+    return state.setScores.reduce((sum, s) => sum + s.player1Games + s.player2Games, 0);
+  };
+
+  // Initialize total games ref on mount
+  useEffect(() => {
+    lastTotalGamesRef.current = getTotalGames(matchState);
+  }, []);
+
+  // Track finished games and calculate their durations
+  useEffect(() => {
+    const currentGames = getTotalGames(matchState);
+    if (currentGames > lastTotalGamesRef.current) {
+      const prevEndSecs = gameDurations.reduce((sum, d) => sum + d, 0);
+      const gameDuration = elapsedSeconds - prevEndSecs;
+      setGameDurations((prev) => [...prev, gameDuration > 0 ? gameDuration : 0]);
+      lastTotalGamesRef.current = currentGames;
+    } else if (currentGames < lastTotalGamesRef.current) {
+      // Handle score undo (if game was rolled back)
+      setGameDurations((prev) => prev.slice(0, -1));
+      lastTotalGamesRef.current = currentGames;
+    }
+  }, [matchState]);
+
   // Load preferred mode
   useEffect(() => {
     const loadMode = async () => {
@@ -535,6 +562,8 @@ export default function ScoreboardView({
                    setsToWin: config.setsToWin,
                    pointsHistory: matchState.pointsHistory || [],
                    stats: calculateMatchStats(matchState.pointsHistory || []),
+                   totalDuration: formatElapsed(elapsedSeconds),
+                   gameDurations: gameDurations.map(d => formatElapsed(d)),
                  };
                  const success = await historyService.saveMatch(matchData);
                 if (success) {

@@ -591,6 +591,33 @@ export default function HistoryScreen({ onBack, language }: HistoryScreenProps) 
                     </View>
                   ) : (
                     <View style={{ gap: 20, marginBottom: 20 }}>
+                      {/* Durations summary */}
+                      {match.totalDuration && (
+                        <View style={styles.durationCard}>
+                          <Ionicons name="time-outline" size={18} color="#ccff00" style={{ marginRight: 6 }} />
+                          <Text style={styles.durationText}>
+                            {language === 'pt' ? 'Tempo Total da Partida:' : language === 'en' ? 'Total Match Time:' : 'Tiempo Total del Partido:'}{' '}
+                            <Text style={{ color: '#ccff00', fontWeight: '800' }}>{match.totalDuration}</Text>
+                          </Text>
+                        </View>
+                      )}
+
+                      {match.gameDurations && match.gameDurations.length > 0 && (
+                        <View style={styles.gameDurationsCard}>
+                          <Text style={styles.gameDurationsTitle}>
+                            {language === 'pt' ? 'Tempo de cada Game' : language === 'en' ? 'Game Durations' : 'Duración de los Games'}
+                          </Text>
+                          <View style={styles.gameDurationsGrid}>
+                            {match.gameDurations.map((dur, gIdx) => (
+                              <View key={gIdx} style={styles.gameDurationBadge}>
+                                <Text style={styles.gameDurationBadgeText}>
+                                  G{gIdx + 1}: <Text style={{ color: '#ccff00', fontWeight: '700' }}>{dur}</Text>
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      )}
                       {/* Stats Section */}
                       {match.stats && (
                         <View style={styles.statsCardContainer}>
@@ -1306,5 +1333,54 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#06b6d4',
+  },
+  durationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 10,
+  },
+  durationText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  gameDurationsCard: {
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    padding: 12,
+  },
+  gameDurationsTitle: {
+    color: '#ccff00',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  gameDurationsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  gameDurationBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  gameDurationBadgeText: {
+    color: '#cbd5e1',
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

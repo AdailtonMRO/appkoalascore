@@ -1,10 +1,6 @@
 export interface TennisConfig {
   player1Name: string;
   player2Name: string;
-  player1Country?: string;
-  player2Country?: string;
-  player1Seed?: string;
-  player2Seed?: string;
   setsToWin: number; // 1, 2 (best of 3), or 3 (best of 5)
   gamesPerSet: number; // e.g., 6 or 4
   useTieBreak: boolean; // default true

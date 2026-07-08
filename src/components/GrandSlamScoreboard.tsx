@@ -121,8 +121,6 @@ export default function GrandSlamScoreboard({
         {playersOrder.map((playerNum) => {
           const isP1 = playerNum === 1;
           const name = isP1 ? config.player1Name : config.player2Name;
-          const country = isP1 ? config.player1Country : config.player2Country;
-          const seed = isP1 ? config.player1Seed : config.player2Seed;
           const isServing = server === playerNum && winner === null;
           const isWinner = winner === playerNum;
 
@@ -156,12 +154,6 @@ export default function GrandSlamScoreboard({
                     {parsed.first ? <Text style={styles.playerFirstName}>{parsed.first} </Text> : null}
                     <Text style={styles.playerLastName}>{parsed.last}</Text>
                   </Text>
-                  {country || seed ? (
-                    <Text style={[styles.playerSubDetails, { fontSize: nameSubFontSize }]}>
-                      {country ? <Text style={styles.countryCode}>{country}</Text> : null}
-                      {seed ? <Text style={styles.seedText}> ({seed})</Text> : null}
-                    </Text>
-                  ) : null}
                 </View>
                 {isWinner && (
                   <Ionicons name="trophy" size={nameFontSize} color="#eab308" style={styles.rowTrophy} />
