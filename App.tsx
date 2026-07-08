@@ -100,14 +100,17 @@ export default function App() {
       }
       link.href = './manifest.json';
 
-      // Prevent body scroll bug on focus
+      // Prevent body scroll bug on focus and allow scrolling on mobile browsers
       const style = document.createElement('style');
       style.innerHTML = `
         html, body {
-          position: fixed;
           width: 100%;
           height: 100%;
-          overflow: hidden;
+          margin: 0;
+          padding: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
         }
       `;
       document.head.appendChild(style);
