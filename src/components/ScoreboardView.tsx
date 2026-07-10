@@ -193,11 +193,33 @@ export default function ScoreboardView({
     }
   };
 
+  const lastKeyRef = useRef<{ key: string; time: number } | null>(null);
+
   const handleKeyPress = (e: any) => {
     const key = e.nativeEvent.key;
+    const now = Date.now();
+    lastKeyRef.current = { key, time: now };
+    
     const action = physicalMappings[`key_${key}`];
     if (action) {
       triggerAction(action);
+    }
+  };
+
+  const handleTextChange = (text: string) => {
+    if (text) {
+      const now = Date.now();
+      const last = lastKeyRef.current;
+      if (last && last.key === text && now - last.time < 150) {
+        textInputRef.current?.clear();
+        return;
+      }
+      
+      const action = physicalMappings[`key_${text}`];
+      if (action) {
+        triggerAction(action);
+      }
+      textInputRef.current?.clear();
     }
   };
 
@@ -648,6 +670,7 @@ export default function ScoreboardView({
         autoCorrect={false}
         value=""
         onKeyPress={handleKeyPress}
+        onChangeText={handleTextChange}
       />
     </View>
   );

@@ -84,6 +84,7 @@ export default function BluetoothConnector({
   const [recordingAction, setRecordingAction] = useState<string | null>(null);
   const recordInputRef = useRef<TextInput | null>(null);
   const recordTouchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const lastRecordedKeyRef = useRef<{ key: string; time: number } | null>(null);
 
   // Keep recording text input focused when modal is active
   useEffect(() => {
@@ -100,8 +101,23 @@ export default function BluetoothConnector({
   const handleRecordKeyPress = (e: any) => {
     const key = e.nativeEvent.key;
     if (recordingAction) {
+      lastRecordedKeyRef.current = { key, time: Date.now() };
       onUpdatePhysicalMapping(`key_${key}`, recordingAction);
       setRecordingAction(null);
+    }
+  };
+
+  const handleRecordTextChange = (text: string) => {
+    if (text && recordingAction) {
+      const now = Date.now();
+      const last = lastRecordedKeyRef.current;
+      if (last && last.key === text && now - last.time < 150) {
+        recordInputRef.current?.clear();
+        return;
+      }
+      onUpdatePhysicalMapping(`key_${text}`, recordingAction);
+      setRecordingAction(null);
+      recordInputRef.current?.clear();
     }
   };
 
@@ -115,7 +131,24 @@ export default function BluetoothConnector({
         else if (input === 'gesture_left') label = language === 'pt' ? 'Deslizar p/ Esquerda' : language === 'es' ? 'Deslizar Izquierda' : 'Swipe Left';
         else if (input === 'gesture_right') label = language === 'pt' ? 'Deslizar p/ Direita' : language === 'es' ? 'Deslizar Derecha' : 'Swipe Right';
         else if (input.startsWith('key_')) {
-          label = `${language === 'pt' ? 'Tecla' : language === 'es' ? 'Tecla' : 'Key'} '${input.substring(4)}'`;
+          const rawKey = input.substring(4);
+          let keyName = rawKey;
+          if (rawKey === ' ') {
+            keyName = language === 'pt' ? 'Espaço' : language === 'es' ? 'Espacio' : 'Space';
+          } else if (rawKey === 'ArrowUp') {
+            keyName = language === 'pt' ? 'Seta p/ Cima' : language === 'es' ? 'Seta Arriba' : 'Arrow Up';
+          } else if (rawKey === 'ArrowDown') {
+            keyName = language === 'pt' ? 'Seta p/ Baixo' : language === 'es' ? 'Seta Abajo' : 'Arrow Down';
+          } else if (rawKey === 'ArrowLeft') {
+            keyName = language === 'pt' ? 'Seta p/ Esquerda' : language === 'es' ? 'Seta Izquierda' : 'Arrow Left';
+          } else if (rawKey === 'ArrowRight') {
+            keyName = language === 'pt' ? 'Seta p/ Direita' : language === 'es' ? 'Seta Derecha' : 'Arrow Right';
+          } else if (rawKey === 'PageUp') {
+            keyName = language === 'pt' ? 'Pág. Cima (PageUp)' : language === 'es' ? 'Pág. Arriba (PageUp)' : 'Page Up';
+          } else if (rawKey === 'PageDown') {
+            keyName = language === 'pt' ? 'Pág. Baixo (PageDown)' : language === 'es' ? 'Pág. Abajo (PageDown)' : 'Page Down';
+          }
+          label = `${language === 'pt' ? 'Tecla' : language === 'es' ? 'Tecla' : 'Key'} '${keyName}'`;
         }
         list.push(label);
       }
@@ -769,6 +802,7 @@ export default function BluetoothConnector({
               autoCorrect={false}
               value=""
               onKeyPress={handleRecordKeyPress}
+              onChangeText={handleRecordTextChange}
             />
 
             {/* Visual indicator of listening */}
@@ -830,6 +864,12 @@ export default function BluetoothConnector({
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.manualTriggerBtn} onPress={() => { onUpdatePhysicalMapping('key_ArrowRight', recordingAction!); setRecordingAction(null); }}>
                     <Text style={styles.manualTriggerBtnText}>⌨️ Seta p/ Direita</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.manualTriggerBtn} onPress={() => { onUpdatePhysicalMapping('key_PageUp', recordingAction!); setRecordingAction(null); }}>
+                    <Text style={styles.manualTriggerBtnText}>⌨️ Page Up</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.manualTriggerBtn} onPress={() => { onUpdatePhysicalMapping('key_PageDown', recordingAction!); setRecordingAction(null); }}>
+                    <Text style={styles.manualTriggerBtnText}>⌨️ Page Down</Text>
                   </TouchableOpacity>
                 </View>
               </View>
