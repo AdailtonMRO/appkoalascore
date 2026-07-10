@@ -17,6 +17,8 @@ export interface SavedMatch {
   setsToWin: number;
   pointsHistory?: PointHistoryEntry[];
   stats?: MatchStats;
+  totalDuration?: string;
+  gameDurations?: string[];
 }
 
 export interface SavedMultiplayerPlayer {

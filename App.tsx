@@ -21,6 +21,7 @@ import {
   addPoint,
   undo,
   toggleCourtSide,
+  INITIAL_CONFIG,
 } from './src/utils/tennisEngine';
 import { MultiplayerSessionState } from './src/utils/multiplayerEngine';
 import { SpeechService } from './src/services/speechService';
@@ -300,6 +301,53 @@ export default function App() {
     }
   };
 
+  const handleQuickStart = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('@koala_tennis_config');
+      let config: TennisConfig;
+      let firstServer: 1 | 2 = 1;
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        config = {
+          player1Name: parsed.player1Name || (language === 'pt' ? 'Jogador 1' : language === 'en' ? 'Player 1' : 'Jugador 1'),
+          player2Name: parsed.player2Name || (language === 'pt' ? 'Jogador 2' : language === 'en' ? 'Player 2' : 'Jugador 2'),
+          setsToWin: parsed.setsToWin !== undefined ? parsed.setsToWin : INITIAL_CONFIG.setsToWin,
+          gamesPerSet: parsed.gamesPerSet !== undefined ? parsed.gamesPerSet : INITIAL_CONFIG.gamesPerSet,
+          useTieBreak: parsed.useTieBreak !== undefined ? parsed.useTieBreak : INITIAL_CONFIG.useTieBreak,
+          tieBreakPoints: parsed.tieBreakPoints !== undefined ? parsed.tieBreakPoints : INITIAL_CONFIG.tieBreakPoints,
+          useMatchTieBreakForFinalSet: parsed.useMatchTieBreakForFinalSet !== undefined ? parsed.useMatchTieBreakForFinalSet : INITIAL_CONFIG.useMatchTieBreakForFinalSet,
+          matchTieBreakPoints: parsed.matchTieBreakPoints || 10,
+          noAdScoring: parsed.noAdScoring !== undefined ? parsed.noAdScoring : INITIAL_CONFIG.noAdScoring,
+          language: language,
+          autoSideChange: parsed.autoSideChange !== undefined ? parsed.autoSideChange : INITIAL_CONFIG.autoSideChange,
+        };
+        firstServer = parsed.firstServer || 1;
+        if (parsed.speechEnabled !== undefined) {
+          setIsVoiceMuted(!parsed.speechEnabled);
+        }
+      } else {
+        config = {
+          ...INITIAL_CONFIG,
+          player1Name: language === 'pt' ? 'Jogador 1' : language === 'en' ? 'Player 1' : 'Jugador 1',
+          player2Name: language === 'pt' ? 'Jogador 2' : language === 'en' ? 'Player 2' : 'Jugador 2',
+          language,
+        };
+      }
+
+      handleStartMatch(config, firstServer);
+    } catch (e) {
+      console.warn('Failed to load quick start config:', e);
+      const fallbackConfig = {
+        ...INITIAL_CONFIG,
+        player1Name: language === 'pt' ? 'Jogador 1' : language === 'en' ? 'Player 1' : 'Jugador 1',
+        player2Name: language === 'pt' ? 'Jogador 2' : language === 'en' ? 'Player 2' : 'Jugador 2',
+        language,
+      };
+      handleStartMatch(fallbackConfig, 1);
+    }
+  };
+
   if (!fontsLoaded) {
     return null;
   }
@@ -317,6 +365,7 @@ export default function App() {
           connectionState={connectionState}
           isVoiceMuted={isVoiceMuted}
           onToggleMute={() => setIsVoiceMuted(!isVoiceMuted)}
+          onQuickStart={handleQuickStart}
         />
       )}
 

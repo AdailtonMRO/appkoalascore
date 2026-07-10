@@ -608,7 +608,7 @@ export default function HistoryScreen({ onBack, language }: HistoryScreenProps) 
                             {language === 'pt' ? 'Tempo de cada Game' : language === 'en' ? 'Game Durations' : 'Duración de los Games'}
                           </Text>
                           <View style={styles.gameDurationsGrid}>
-                            {match.gameDurations.map((dur, gIdx) => (
+                            {match.gameDurations.map((dur: string, gIdx: number) => (
                               <View key={gIdx} style={styles.gameDurationBadge}>
                                 <Text style={styles.gameDurationBadgeText}>
                                   G{gIdx + 1}: <Text style={{ color: '#ccff00', fontWeight: '700' }}>{dur}</Text>

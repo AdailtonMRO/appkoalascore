@@ -76,6 +76,7 @@ interface HomeScreenProps {
   connectionState: BleConnectionState;
   isVoiceMuted: boolean;
   onToggleMute: () => void;
+  onQuickStart: () => void;
 }
 
 export default function HomeScreen({
@@ -85,6 +86,7 @@ export default function HomeScreen({
   connectionState,
   isVoiceMuted,
   onToggleMute,
+  onQuickStart,
 }: HomeScreenProps) {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [adLoaded, setAdLoaded] = useState(false);
@@ -139,6 +141,8 @@ export default function HomeScreen({
       subtitle: 'Controle de Placar Inteligente',
       setupBtn: 'Configurar Partida',
       setupDesc: 'Defina jogadores, sets e regras da partida',
+      quickStartBtn: 'Início Rápido',
+      quickStartDesc: 'Mantém as últimas configurações válidas e inicia',
       remoteBtn: 'Controles Remotos',
       remoteDesc: 'Pareie botões Bluetooth ou smartwatch',
       langBtn: 'Idioma / Language',
@@ -173,6 +177,8 @@ export default function HomeScreen({
       subtitle: 'Smart Scoreboard Control',
       setupBtn: 'Configure Match',
       setupDesc: 'Define players, sets and match rules',
+      quickStartBtn: 'Quick Start',
+      quickStartDesc: 'Keep the last valid configurations and start',
       remoteBtn: 'Remote Controls',
       remoteDesc: 'Pair Bluetooth clickers or smartwatches',
       langBtn: 'Language / Idioma',
@@ -207,6 +213,8 @@ export default function HomeScreen({
       subtitle: 'Control Inteligente de Marcador',
       setupBtn: 'Configurar Partido',
       setupDesc: 'Define jugadores, sets y reglas del partido',
+      quickStartBtn: 'Inicio Rápido',
+      quickStartDesc: 'Mantiene las últimas configuraciones válidas e inicia',
       remoteBtn: 'Controles Remotos',
       remoteDesc: 'Empareja botones Bluetooth o relojes',
       langBtn: 'Idioma / Language',
@@ -232,7 +240,7 @@ export default function HomeScreen({
       exitAlertMsg: '¿Realmente desea cerrar la aplicación?',
       exitAlertCancel: 'Cancelar',
       exitAlertConfirm: 'Salir',
-      settingsBtn: 'Ajustes, Idioma y Ayuda',
+      settingsBtn: 'Ajustes, Idioma y Ajuda',
       settingsDesc: 'Idioma, emparejamiento de control y manual de uso',
       selectLang: 'Seleccionar Idioma',
     },
@@ -288,6 +296,18 @@ export default function HomeScreen({
 
       {/* Menu Options */}
       <View style={styles.menuContainer}>
+        {/* Quick Start Option */}
+        <TouchableOpacity style={styles.menuItem} onPress={onQuickStart}>
+          <View style={[styles.iconWrapper, { backgroundColor: '#ccff00' }]}>
+            <Ionicons name="play" size={24} color="#0f172a" />
+          </View>
+          <View style={styles.menuTextCol}>
+            <Text style={styles.menuItemTitle}>{t.quickStartBtn}</Text>
+            <Text style={styles.menuItemDesc}>{t.quickStartDesc}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#475569" />
+        </TouchableOpacity>
+
         {/* Configure Match Option */}
         <TouchableOpacity style={styles.menuItem} onPress={() => onNavigate('setup')}>
           <View style={[styles.iconWrapper, { backgroundColor: '#06b6d4' }]}>
