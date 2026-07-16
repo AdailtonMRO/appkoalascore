@@ -224,7 +224,7 @@ export default function ScoreboardView({
   const handleStartShouldSetResponder = (e: any) => {
     const { pageX, pageY } = e.nativeEvent;
     touchStartRef.current = { x: pageX, y: pageY, time: Date.now() };
-    return true; // return true so empty space touch start is accepted and tracked!
+    return false; // return false to allow child touchables to receive taps, capture only on move/swipe!
   };
 
   const textInputRef = useRef<TextInput | null>(null);
