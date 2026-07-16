@@ -880,14 +880,7 @@ export default function ScoreboardView({
       )}
 
       {/* Modal do Menu de Opções */}
-      <Modal
-        visible={showOptionsMenu}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setShowOptionsMenu(false);
-        }}
-      >
+      {showOptionsMenu && (
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent}>
             
@@ -1134,7 +1127,7 @@ export default function ScoreboardView({
             </View>
           </View>
         </View>
-      </Modal>
+      )}
 
       {/* Invisible TextInput to capture remote keypresses (like Tab) */}
       <TextInput
@@ -1614,10 +1607,15 @@ const styles = StyleSheet.create({
 
   // Modal Styles
   modalBackdrop: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 110,
     padding: 16,
   },
   modalContent: {
