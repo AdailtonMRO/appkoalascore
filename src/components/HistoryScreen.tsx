@@ -17,9 +17,10 @@ import { PointHistoryEntry } from '../utils/tennisEngine';
 interface HistoryScreenProps {
   onBack: () => void;
   language: 'pt' | 'en' | 'es';
+  onResumeMatch?: (match: SavedMatch) => void;
 }
 
-export default function HistoryScreen({ onBack, language }: HistoryScreenProps) {
+export default function HistoryScreen({ onBack, language, onResumeMatch }: HistoryScreenProps) {
   const [historyItems, setHistoryItems] = useState<HistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingItem, setEditingItem] = useState<HistoryItem | null>(null);
@@ -320,6 +321,47 @@ export default function HistoryScreen({ onBack, language }: HistoryScreenProps) 
                         </Text>
                       </View>
                     </View>
+                    {item.terminationType && item.terminationType !== 'completed' && (
+                      <View style={styles.terminationBadge}>
+                        <Ionicons 
+                          name={item.terminationType === 'retired' ? "warning-outline" : "thunderstorm-outline"} 
+                          size={13} 
+                          color={item.terminationType === 'retired' ? "#f97316" : "#38bdf8"} 
+                          style={{ marginRight: 5 }}
+                        />
+                        <Text style={[
+                          styles.terminationBadgeText,
+                          { color: item.terminationType === 'retired' ? "#f97316" : "#38bdf8" }
+                        ]}>
+                          {(() => {
+                            if (item.terminationType === 'retired') {
+                              const retiredName = item.retiredPlayer === 1 ? item.player1Name : item.player2Name;
+                              const reasonStr = item.retirementReason === 'injury'
+                                ? (language === 'pt' ? 'lesão' : language === 'es' ? 'lesión' : 'injury')
+                                : (language === 'pt' ? 'desistência' : language === 'es' ? 'desistencia' : 'withdrawal');
+                              return language === 'pt'
+                                ? `Vitória por ${reasonStr} de ${retiredName}`
+                                : language === 'es'
+                                ? `Victoria por ${reasonStr} de ${retiredName}`
+                                : `Won by retirement (${reasonStr}) of ${retiredName}`;
+                            } else {
+                              const reasonStr = {
+                                weather: language === 'pt' ? 'chuva / clima' : language === 'es' ? 'lluvia / clima' : 'weather',
+                                power_outage: language === 'pt' ? 'falta de energia' : language === 'es' ? 'falta de energía' : 'power outage',
+                                court_issue: language === 'pt' ? 'problema na quadra' : language === 'es' ? 'problema de cancha' : 'court issue',
+                                other: language === 'pt' ? 'força maior' : language === 'es' ? 'fuerza mayor' : 'unforeseen reason',
+                              }[item.abandonmentReason || 'other'];
+                              
+                              return language === 'pt'
+                                ? `Interrompida por: ${reasonStr}`
+                                : language === 'es'
+                                ? `Suspendido por: ${reasonStr}`
+                                : `Suspended due to: ${reasonStr}`;
+                            }
+                          })()}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 ) : (
                   // Render Multiplayer Rotation Summary
@@ -358,6 +400,18 @@ export default function HistoryScreen({ onBack, language }: HistoryScreenProps) 
                       <Ionicons name="stats-chart-outline" size={18} color="#06b6d4" />
                       <Text style={[styles.actionBtnText, { color: '#06b6d4' }]}>
                         {language === 'pt' ? 'Detalhes' : language === 'en' ? 'Details' : 'Detalles'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
+                  {isClassic && item.terminationType === 'abandoned' && item.rawState && onResumeMatch && (
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => onResumeMatch(item as SavedMatch)}
+                    >
+                      <Ionicons name="play-outline" size={18} color="#10b981" />
+                      <Text style={[styles.actionBtnText, { color: '#10b981' }]}>
+                        {language === 'pt' ? 'Retomar' : language === 'en' ? 'Resume' : 'Reanudar'}
                       </Text>
                     </TouchableOpacity>
                   )}
@@ -583,6 +637,52 @@ export default function HistoryScreen({ onBack, language }: HistoryScreenProps) 
                       {match.winner === 2 && <Ionicons name="trophy" size={14} color="#eab308" style={{ marginTop: 2 }} />}
                     </View>
                   </View>
+
+                  {match.terminationType && match.terminationType !== 'completed' && (
+                    <View style={[
+                      styles.detailsTerminationBanner,
+                      { backgroundColor: match.terminationType === 'retired' ? 'rgba(249, 115, 22, 0.1)' : 'rgba(56, 189, 248, 0.1)' },
+                      { borderColor: match.terminationType === 'retired' ? '#f97316' : '#38bdf8' }
+                    ]}>
+                      <Ionicons 
+                        name={match.terminationType === 'retired' ? "warning" : "thunderstorm"} 
+                        size={16} 
+                        color={match.terminationType === 'retired' ? "#f97316" : "#38bdf8"} 
+                        style={{ marginRight: 8 }}
+                      />
+                      <Text style={[
+                        styles.detailsTerminationText,
+                        { color: match.terminationType === 'retired' ? "#f97316" : "#38bdf8" }
+                      ]}>
+                        {(() => {
+                          if (match.terminationType === 'retired') {
+                            const retiredName = match.retiredPlayer === 1 ? match.player1Name : match.player2Name;
+                            const reasonStr = match.retirementReason === 'injury'
+                              ? (language === 'pt' ? 'lesão' : language === 'es' ? 'lesión' : 'injury')
+                              : (language === 'pt' ? 'desistência' : language === 'es' ? 'desistencia' : 'withdrawal');
+                            return language === 'pt'
+                              ? `Partida encerrada devido a ${reasonStr} de ${retiredName}`
+                              : language === 'es'
+                              ? `Partido finalizado debido a ${reasonStr} de ${retiredName}`
+                              : `Match finished due to retirement (${reasonStr}) of ${retiredName}`;
+                          } else {
+                            const reasonStr = {
+                              weather: language === 'pt' ? 'chuva / condições climáticas' : language === 'es' ? 'lluvia / condiciones climáticas' : 'weather',
+                              power_outage: language === 'pt' ? 'falta de energia' : language === 'es' ? 'falta de energía' : 'power outage',
+                              court_issue: language === 'pt' ? 'problema na quadra ou rede' : language === 'es' ? 'problema de cancha o red' : 'court or net issue',
+                              other: language === 'pt' ? 'motivos de força maior' : language === 'es' ? 'motivos de fuerza mayor' : 'unforeseen reasons',
+                            }[match.abandonmentReason || 'other'];
+                            
+                            return language === 'pt'
+                              ? `Partida suspensa por: ${reasonStr}`
+                              : language === 'es'
+                              ? `Partido suspendido por: ${reasonStr}`
+                              : `Match suspended due to: ${reasonStr}`;
+                          }
+                        })()}
+                      </Text>
+                    </View>
+                  )}
 
                   {!hasTimeline ? (
                     <View style={styles.legacyContainer}>
@@ -1382,5 +1482,39 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 10,
     fontWeight: '600',
+  },
+  terminationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 8,
+    alignSelf: 'center',
+  },
+  terminationBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  detailsTerminationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginVertical: 12,
+  },
+  detailsTerminationText: {
+    fontSize: 13,
+    fontWeight: '800',
+    flex: 1,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });

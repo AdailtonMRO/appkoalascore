@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { PointHistoryEntry, MatchStats } from '../utils/tennisEngine';
+import { PointHistoryEntry, MatchStats, MatchState } from '../utils/tennisEngine';
 
 export interface SavedMatch {
   id: string;
@@ -13,12 +13,17 @@ export interface SavedMatch {
     player1TieBreakPoints?: number;
     player2TieBreakPoints?: number;
   }[];
-  winner: 1 | 2;
+  winner: 1 | 2 | null;
   setsToWin: number;
   pointsHistory?: PointHistoryEntry[];
   stats?: MatchStats;
   totalDuration?: string;
   gameDurations?: string[];
+  terminationType?: 'completed' | 'retired' | 'abandoned';
+  retiredPlayer?: 1 | 2;
+  retirementReason?: 'injury' | 'forfeit';
+  abandonmentReason?: 'weather' | 'power_outage' | 'court_issue' | 'other';
+  rawState?: MatchState;
 }
 
 export interface SavedMultiplayerPlayer {

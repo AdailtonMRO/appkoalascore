@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   Alert,
   TextInput,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -25,6 +26,8 @@ interface ScoreboardViewProps {
   onToggleMute: () => void;
   onToggleSide: () => void; // Callback to toggle ends manually
   physicalMappings: Record<string, string>;
+  onRetireMatch: (player: 1 | 2, reason: 'injury' | 'forfeit') => void;
+  onAbandonMatch: (reason: 'weather' | 'power_outage' | 'court_issue' | 'other') => void;
 }
 
 export default function ScoreboardView({
@@ -36,13 +39,25 @@ export default function ScoreboardView({
   onToggleMute,
   onToggleSide,
   physicalMappings,
+  onRetireMatch,
+  onAbandonMatch,
 }: ScoreboardViewProps) {
   const { config, player1Sets, player2Sets, setScores, currentSetIndex, isTieBreak, isMatchTieBreak, server, winner } = matchState;
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isSaved, setIsSaved] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
+  const [optionsMenuSubview, setOptionsMenuSubview] = useState<'main' | 'retire_player_forfeit' | 'retire_player_injury' | 'abandon_reason'>('main');
 
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(matchState.elapsedSeconds || 0);
+
+  // Sync elapsedSeconds when matchState changes (e.g. loaded from history)
+  useEffect(() => {
+    setElapsedSeconds(matchState.elapsedSeconds || 0);
+    setIsSaved(false); // Reset isSaved state for a new match
+    setIsPaused(false); // Reset pause state
+  }, [matchState]);
   const [currentTime, setCurrentTime] = useState('');
   const [scoreboardMode, setScoreboardMode] = useState<'classic' | 'grandslam'>(
     width >= 768 ? 'grandslam' : 'classic'
@@ -111,9 +126,13 @@ export default function ScoreboardView({
 
     // 2. Elapsed Match Timer
     let matchTimer: any;
-    if (winner === null) {
+    if (winner === null && !isPaused) {
       matchTimer = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
+        setElapsedSeconds((prev) => {
+          const nextVal = prev + 1;
+          matchState.elapsedSeconds = nextVal;
+          return nextVal;
+        });
       }, 1000);
     }
 
@@ -121,7 +140,7 @@ export default function ScoreboardView({
       clearInterval(timeInterval);
       if (matchTimer) clearInterval(matchTimer);
     };
-  }, [winner]);
+  }, [winner, isPaused]);
 
   const formatElapsed = (totalSecs: number) => {
     const h = Math.floor(totalSecs / 3600);
@@ -376,10 +395,57 @@ export default function ScoreboardView({
     SpeechService.announceScore(matchState);
   };
 
+  const confirmRetirement = (player: 1 | 2, reason: 'injury' | 'forfeit') => {
+    const playerName = player === 1 ? config.player1Name : config.player2Name;
+    const opponentName = player === 1 ? config.player2Name : config.player1Name;
+    const reasonText = reason === 'injury'
+      ? (config.language === 'pt' ? 'lesão' : config.language === 'es' ? 'lesión' : 'injury')
+      : (config.language === 'pt' ? 'desistência' : config.language === 'es' ? 'desistencia' : 'forfeit');
+
+    Alert.alert(
+      config.language === 'pt' ? 'Confirmar Encerramento' : 'Confirm Early End',
+      config.language === 'pt'
+        ? `Confirmar a vitória de ${opponentName} devido a ${reasonText} de ${playerName}?`
+        : `Confirm victory of ${opponentName} due to ${playerName}'s ${reasonText}?`,
+      [
+        { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+        { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: () => {
+          setShowOptionsMenu(false);
+          setIsPaused(false);
+          onRetireMatch(player, reason);
+        }}
+      ]
+    );
+  };
+
+  const confirmAbandonment = (reason: 'weather' | 'power_outage' | 'court_issue' | 'other') => {
+    const reasonLabel = {
+      weather: config.language === 'pt' ? 'Chuva / Condições Climáticas' : 'Rain / Weather',
+      power_outage: config.language === 'pt' ? 'Falta de Energia' : 'Power Outage',
+      court_issue: config.language === 'pt' ? 'Problema na Quadra ou Rede' : 'Court/Net issue',
+      other: config.language === 'pt' ? 'Outro Motivo' : 'Other reason',
+    }[reason];
+
+    Alert.alert(
+      config.language === 'pt' ? 'Confirmar Suspensão' : 'Confirm Suspension',
+      config.language === 'pt'
+        ? `Deseja suspender a partida devido a: ${reasonLabel}? Ela será salva sem vencedor e poderá ser retomada depois.`
+        : `Do you want to suspend the match due to: ${reasonLabel}? It will be saved without a winner and can be resumed later.`,
+      [
+        { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+        { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: () => {
+          setShowOptionsMenu(false);
+          setIsPaused(false);
+          onAbandonMatch(reason);
+        }}
+      ]
+    );
+  };
+
   // Calculate dynamic font size for the score numbers
   // In portrait, we use standard sizes, in landscape we scale with screen height
   const scoreFontSize = isLandscape
-    ? Math.min(height * 0.48, 240)
+    ? Math.min(height * 0.68, 280)
     : 96;
   const player1Card = (
     <TouchableOpacity
@@ -392,7 +458,7 @@ export default function ScoreboardView({
         isLandscape && styles.playerCardLandscape,
       ]}
       onPress={() => onAddPoint(1)}
-      disabled={winner !== null}
+      disabled={winner !== null || isPaused}
     >
       {server === 1 && (
         <View style={[styles.servingTag, isLandscape && styles.servingTagLandscape, { backgroundColor: '#06b6d4' }]}>
@@ -411,6 +477,7 @@ export default function ScoreboardView({
               key={i}
               style={[
                 styles.setDot,
+                isLandscape && styles.setDotLandscape,
                 { backgroundColor: i < player1Sets ? '#06b6d4' : 'rgba(255, 255, 255, 0.1)' },
               ]}
             />
@@ -437,7 +504,7 @@ export default function ScoreboardView({
         isLandscape && styles.playerCardLandscape,
       ]}
       onPress={() => onAddPoint(2)}
-      disabled={winner !== null}
+      disabled={winner !== null || isPaused}
     >
       {server === 2 && (
         <View style={[styles.servingTag, isLandscape && styles.servingTagLandscape, { backgroundColor: '#f97316' }]}>
@@ -456,6 +523,7 @@ export default function ScoreboardView({
               key={i}
               style={[
                 styles.setDot,
+                isLandscape && styles.setDotLandscape,
                 { backgroundColor: i < player2Sets ? '#f97316' : 'rgba(255, 255, 255, 0.1)' },
               ]}
             />
@@ -479,7 +547,7 @@ export default function ScoreboardView({
       onResponderRelease={handleResponderRelease}
     >
       {/* Layout Mode Selector (Always visible to allow selection) */}
-      <View style={styles.modeSelectorRow}>
+      <View style={[styles.modeSelectorRow, isLandscape && styles.modeSelectorRowLandscape]}>
         <TouchableOpacity 
           style={[styles.modeToggleBtn, scoreboardMode === 'classic' && styles.modeToggleBtnActive]} 
           onPress={() => toggleScoreboardMode()}
@@ -506,20 +574,21 @@ export default function ScoreboardView({
           elapsedTime={formatElapsed(elapsedSeconds)}
           isVoiceMuted={isVoiceMuted}
           onToggleMute={onToggleMute}
+          isPaused={isPaused}
         />
       ) : (
         <>
           {/* Set Scores Summary */}
           <View style={[styles.header, isLandscape && styles.headerLandscape]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={styles.matchFormatText}>
+              <Text style={[styles.matchFormatText, isLandscape && styles.matchFormatTextLandscape]}>
                 {isMatchTieBreak
                   ? t.superTB
                   : isTieBreak
                   ? t.tb
                   : `${t.set} ${currentSetIndex + 1} • ${t.bestOf} ${config.setsToWin * 2 - 1}`}
               </Text>
-              <TouchableOpacity onPress={onToggleMute} style={{ padding: 4, marginTop: -8 }}>
+              <TouchableOpacity onPress={onToggleMute} style={[{ padding: 4 }, isLandscape ? { marginTop: 0 } : { marginTop: -8 }]}>
                 <Ionicons 
                   name={isVoiceMuted ? "volume-mute" : "volume-high"} 
                   size={18} 
@@ -586,9 +655,17 @@ export default function ScoreboardView({
                    stats: calculateMatchStats(matchState.pointsHistory || []),
                    totalDuration: formatElapsed(elapsedSeconds),
                    gameDurations: gameDurations.map(d => formatElapsed(d)),
+                   terminationType: matchState.terminationType || 'completed',
+                   retiredPlayer: matchState.retiredPlayer,
+                   retirementReason: matchState.retirementReason,
+                   abandonmentReason: matchState.abandonmentReason,
+                   rawState: matchState,
                  };
                  const success = await historyService.saveMatch(matchData);
                 if (success) {
+                  if (matchState.resumedMatchId) {
+                    await historyService.deleteMatch(matchState.resumedMatchId);
+                  }
                   setIsSaved(true);
                   Alert.alert(
                     config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
@@ -650,17 +727,330 @@ export default function ScoreboardView({
             </Text>
           </TouchableOpacity>
 
+          {winner !== null ? (
+            <TouchableOpacity 
+              style={[styles.controlBtn, styles.dangerBtn, isLandscape && styles.controlBtnLandscape]} 
+              onPress={onReset}
+            >
+              <Ionicons name="refresh" size={isLandscape ? 16 : 20} color="#ef4444" />
+              <Text style={[styles.controlBtnText, { color: '#ef4444' }, isLandscape && styles.controlBtnTextLandscape]} numberOfLines={1}>
+                {t.newGame}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={[styles.controlBtn, styles.dangerBtn, isLandscape && styles.controlBtnLandscape]} 
+              onPress={() => {
+                setIsPaused(true);
+                setOptionsMenuSubview('main');
+                setShowOptionsMenu(true);
+              }}
+            >
+              <Ionicons name="pause" size={isLandscape ? 16 : 20} color="#ef4444" />
+              <Text style={[styles.controlBtnText, { color: '#ef4444' }, isLandscape && styles.controlBtnTextLandscape]} numberOfLines={1}>
+                {config.language === 'pt' ? 'Interromper' : config.language === 'es' ? 'Interrumpir' : 'Interrupt'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+      {/* Overlay de Pausa / Interrupção */}
+      {isPaused && !showOptionsMenu && (
+        <View style={styles.pausedOverlay}>
+          <Ionicons name="pause-circle" size={80} color="#ccff00" style={{ marginBottom: 15 }} />
+          <Text style={styles.pausedTitle}>
+            {config.language === 'pt' ? 'Partida Suspensa' : config.language === 'es' ? 'Partido Suspendido' : 'Match Suspended'}
+          </Text>
+          <Text style={styles.pausedSubtitle}>
+            {config.language === 'pt' 
+              ? 'O cronômetro está parado e as marcações de ponto estão bloqueadas.' 
+              : config.language === 'es' 
+              ? 'El cronómetro está parado y los controles de punto están bloqueados.' 
+              : 'The timer is stopped and scoring buttons are locked.'}
+          </Text>
+          
           <TouchableOpacity 
-            style={[styles.controlBtn, styles.dangerBtn, isLandscape && styles.controlBtnLandscape]} 
-            onPress={onReset}
+            style={styles.resumeOverlayBtn} 
+            onPress={() => setIsPaused(false)}
           >
-            <Ionicons name="refresh" size={isLandscape ? 16 : 20} color="#ef4444" />
-            <Text style={[styles.controlBtnText, { color: '#ef4444' }, isLandscape && styles.controlBtnTextLandscape]} numberOfLines={1}>
-              {t.newGame}
+            <Ionicons name="play" size={22} color="#090d16" style={{ marginRight: 8 }} />
+            <Text style={styles.resumeOverlayBtnText}>
+              {config.language === 'pt' ? 'Retomar Partida' : config.language === 'es' ? 'Retomar Partido' : 'Resume Match'}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuOverlayBtn} 
+            onPress={() => {
+              setOptionsMenuSubview('main');
+              setShowOptionsMenu(true);
+            }}
+          >
+            <Ionicons name="menu" size={20} color="#ccff00" style={{ marginRight: 6 }} />
+            <Text style={styles.menuOverlayBtnText}>
+              {config.language === 'pt' ? 'Menu de Opções' : config.language === 'es' ? 'Menú de Opciones' : 'Options Menu'}
             </Text>
           </TouchableOpacity>
         </View>
-      </View>
+      )}
+
+      {/* Modal do Menu de Opções */}
+      <Modal
+        visible={showOptionsMenu}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setShowOptionsMenu(false);
+        }}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalContent}>
+            
+            {/* Cabeçalho do Modal */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {optionsMenuSubview === 'main' && (config.language === 'pt' ? 'OPÇÕES DA PARTIDA' : config.language === 'es' ? 'OPCIONES DEL PARTIDO' : 'MATCH OPTIONS')}
+                {optionsMenuSubview === 'retire_player_forfeit' && (config.language === 'pt' ? 'DESISTÊNCIA (FORFEIT)' : config.language === 'es' ? 'DESISTENCIA' : 'DECLARING FORFEIT')}
+                {optionsMenuSubview === 'retire_player_injury' && (config.language === 'pt' ? 'ENCERRAR POR LESÃO' : config.language === 'es' ? 'LESIONADO' : 'DECLARING INJURY')}
+                {optionsMenuSubview === 'abandon_reason' && (config.language === 'pt' ? 'SUSPENDER PARTIDA' : config.language === 'es' ? 'SUSPENDER PARTIDO' : 'SUSPEND MATCH')}
+              </Text>
+              <TouchableOpacity onPress={() => setShowOptionsMenu(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Conteúdo dinâmico do Modal baseados na subview */}
+            <View style={styles.modalBody}>
+              {optionsMenuSubview === 'main' && (
+                <View style={styles.menuButtonsContainer}>
+                  {/* Botão Retomar */}
+                  <TouchableOpacity 
+                    style={[styles.menuOptionBtn, styles.menuOptionBtnPrimary]} 
+                    onPress={() => {
+                      setShowOptionsMenu(false);
+                      setIsPaused(false);
+                    }}
+                  >
+                    <Ionicons name="play-outline" size={20} color="#090d16" style={{ marginRight: 10 }} />
+                    <Text style={[styles.menuOptionBtnText, { color: '#090d16' }]}>
+                      {config.language === 'pt' ? 'Retomar Partida' : config.language === 'es' ? 'Retomar Partido' : 'Resume Match'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Pausar/Despausar Cronômetro alternadamente sem fechar modal */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => setIsPaused(!isPaused)}
+                  >
+                    <Ionicons name={isPaused ? "play-circle-outline" : "pause-circle-outline"} size={20} color="#ccff00" style={{ marginRight: 10 }} />
+                    <Text style={styles.menuOptionBtnText}>
+                      {isPaused 
+                        ? (config.language === 'pt' ? 'Retomar Cronômetro' : config.language === 'es' ? 'Retomar Cronómetro' : 'Resume Timer')
+                        : (config.language === 'pt' ? 'Pausar Cronômetro' : config.language === 'es' ? 'Pausar Cronómetro' : 'Pause Timer')
+                      }
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Desistência */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => setOptionsMenuSubview('retire_player_forfeit')}
+                  >
+                    <Ionicons name="flag-outline" size={20} color="#f97316" style={{ marginRight: 10 }} />
+                    <Text style={styles.menuOptionBtnText}>
+                      {config.language === 'pt' ? 'Encerrar por Desistência' : config.language === 'es' ? 'Declarar Desistencia' : 'End by Forfeit'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Lesão */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => setOptionsMenuSubview('retire_player_injury')}
+                  >
+                    <Ionicons name="medical-outline" size={20} color="#f97316" style={{ marginRight: 10 }} />
+                    <Text style={styles.menuOptionBtnText}>
+                      {config.language === 'pt' ? 'Encerrar por Lesão' : config.language === 'es' ? 'Encerrar por Lesión' : 'End by Injury'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Suspensão Externa */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => setOptionsMenuSubview('abandon_reason')}
+                  >
+                    <Ionicons name="thunderstorm-outline" size={20} color="#38bdf8" style={{ marginRight: 10 }} />
+                    <Text style={styles.menuOptionBtnText}>
+                      {config.language === 'pt' ? 'Suspender (Chuva/Força Maior)' : config.language === 'es' ? 'Suspender (Lluvia/Fuerza Mayor)' : 'Suspend (Weather/Force Majeure)'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Reiniciar */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => {
+                      Alert.alert(
+                        config.language === 'pt' ? 'Reiniciar Partida' : 'Reset Match',
+                        config.language === 'pt' ? 'Deseja reiniciar a pontuação deste jogo?' : 'Do you want to reset the score of this match?',
+                        [
+                          { text: config.language === 'pt' ? 'Não' : 'No', style: 'cancel' },
+                          { text: config.language === 'pt' ? 'Sim, Reiniciar' : 'Yes, Reset', style: 'destructive', onPress: () => {
+                            setShowOptionsMenu(false);
+                            onReset();
+                          }}
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="refresh-outline" size={20} color="#ef4444" style={{ marginRight: 10 }} />
+                    <Text style={[styles.menuOptionBtnText, { color: '#ef4444' }]}>
+                      {config.language === 'pt' ? 'Reiniciar Partida' : config.language === 'es' ? 'Reiniciar Partido' : 'Reset Match'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Sair */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => {
+                      Alert.alert(
+                        config.language === 'pt' ? 'Sair da Partida' : 'Exit Match',
+                        config.language === 'pt' ? 'Deseja sair da partida? O progresso não salvo será perdido.' : 'Do you want to exit? Unsaved progress will be lost.',
+                        [
+                          { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+                          { text: config.language === 'pt' ? 'Sair' : 'Exit', style: 'destructive', onPress: () => {
+                            setShowOptionsMenu(false);
+                            onReset();
+                          }}
+                        ]
+                      );
+                    }}
+                  >
+                    <Ionicons name="home-outline" size={20} color="#ef4444" style={{ marginRight: 10 }} />
+                    <Text style={[styles.menuOptionBtnText, { color: '#ef4444' }]}>
+                      {config.language === 'pt' ? 'Sair (Ir para Início)' : config.language === 'es' ? 'Salir (Ir al Inicio)' : 'Exit Match (Go Home)'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Subview: Desistência */}
+              {optionsMenuSubview === 'retire_player_forfeit' && (
+                <View style={styles.submenuContainer}>
+                  <Text style={styles.submenuInstruction}>
+                    {config.language === 'pt' ? 'Selecione o jogador que está desistindo da partida:' : 'Select the player who is forfeiting the match:'}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmRetirement(1, 'forfeit')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>{config.player1Name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmRetirement(2, 'forfeit')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>{config.player2Name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.submenuBackBtn} 
+                    onPress={() => setOptionsMenuSubview('main')}
+                  >
+                    <Ionicons name="arrow-back" size={16} color="#ccff00" style={{ marginRight: 6 }} />
+                    <Text style={styles.submenuBackBtnText}>
+                      {config.language === 'pt' ? 'Voltar' : 'Back'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Subview: Lesão */}
+              {optionsMenuSubview === 'retire_player_injury' && (
+                <View style={styles.submenuContainer}>
+                  <Text style={styles.submenuInstruction}>
+                    {config.language === 'pt' ? 'Selecione o jogador que sofreu a lesão e não pode continuar:' : 'Select the player who suffered the injury:'}
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmRetirement(1, 'injury')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>{config.player1Name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmRetirement(2, 'injury')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>{config.player2Name}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.submenuBackBtn} 
+                    onPress={() => setOptionsMenuSubview('main')}
+                  >
+                    <Ionicons name="arrow-back" size={16} color="#ccff00" style={{ marginRight: 6 }} />
+                    <Text style={styles.submenuBackBtnText}>
+                      {config.language === 'pt' ? 'Voltar' : 'Back'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Subview: Abandono / Suspensão Externa */}
+              {optionsMenuSubview === 'abandon_reason' && (
+                <View style={styles.submenuContainer}>
+                  <Text style={styles.submenuInstruction}>
+                    {config.language === 'pt' ? 'Selecione o motivo da suspensão da partida:' : 'Select the reason for match suspension:'}
+                  </Text>
+                  
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmAbandonment('weather')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>
+                      {config.language === 'pt' ? 'Chuva / Condições Climáticas' : 'Rain / Weather conditions'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmAbandonment('power_outage')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>
+                      {config.language === 'pt' ? 'Falta de Energia' : 'Power Outage'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmAbandonment('court_issue')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>
+                      {config.language === 'pt' ? 'Problema na Quadra ou Rede' : 'Court or Net Issue'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.submenuOptionBtn} 
+                    onPress={() => confirmAbandonment('other')}
+                  >
+                    <Text style={styles.submenuOptionBtnText}>
+                      {config.language === 'pt' ? 'Outro Motivo' : 'Other Reason'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={styles.submenuBackBtn} 
+                    onPress={() => setOptionsMenuSubview('main')}
+                  >
+                    <Ionicons name="arrow-back" size={16} color="#ccff00" style={{ marginRight: 6 }} />
+                    <Text style={styles.submenuBackBtnText}>
+                      {config.language === 'pt' ? 'Voltar' : 'Back'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Invisible TextInput to capture remote keypresses (like Tab) */}
       <TextInput
         ref={textInputRef}
@@ -712,6 +1102,9 @@ const styles = StyleSheet.create({
     color: '#64748b',
     letterSpacing: 1.5,
     marginBottom: 10,
+  },
+  matchFormatTextLandscape: {
+    marginBottom: 0,
   },
   setsHistoryContainer: {
     flexDirection: 'row',
@@ -796,7 +1189,8 @@ const styles = StyleSheet.create({
   },
   playerCardLandscape: {
     borderRadius: 12,
-    padding: Platform.OS === 'web' ? 4 : 8,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
   playerCardP1: {
     borderLeftWidth: 4,
@@ -830,10 +1224,11 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   servingTagLandscape: {
-    top: 8,
-    right: 8,
-    paddingHorizontal: 6,
+    top: 4,
+    right: 4,
+    paddingHorizontal: 4,
     paddingVertical: 2,
+    borderRadius: 4,
   },
   servingTagText: {
     fontSize: 9,
@@ -868,6 +1263,11 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
+  },
+  setDotLandscape: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   scoreNumberContainer: {
     flex: 1,
@@ -1042,6 +1442,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.05)',
     marginBottom: 8,
   },
+  modeSelectorRowLandscape: {
+    marginBottom: 2,
+    marginTop: 0,
+  },
   modeToggleBtn: {
     paddingVertical: 5,
     paddingHorizontal: 12,
@@ -1057,5 +1461,171 @@ const styles = StyleSheet.create({
   },
   modeToggleTextActive: {
     color: '#0f172a',
+  },
+  // Paused Overlay Styles
+  pausedOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(9, 13, 22, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+    padding: 24,
+  },
+  pausedTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#ccff00',
+    marginBottom: 8,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  pausedSubtitle: {
+    fontSize: 14,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 20,
+    maxWidth: 280,
+  },
+  resumeOverlayBtn: {
+    backgroundColor: '#ccff00',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 15,
+    width: '80%',
+    maxWidth: 260,
+  },
+  resumeOverlayBtnText: {
+    color: '#090d16',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  menuOverlayBtn: {
+    borderWidth: 1,
+    borderColor: '#ccff00',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    width: '80%',
+    maxWidth: 260,
+  },
+  menuOverlayBtnText: {
+    color: '#ccff00',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  // Modal Styles
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  modalContent: {
+    backgroundColor: '#090d16',
+    borderWidth: 1.5,
+    borderColor: '#06b6d4',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 340,
+    overflow: 'hidden',
+    shadowColor: '#06b6d4',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 15,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  modalTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#f8fafc',
+    letterSpacing: 1,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  menuButtonsContainer: {
+    gap: 10,
+  },
+  menuOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuOptionBtnPrimary: {
+    backgroundColor: '#ccff00',
+    borderColor: '#ccff00',
+  },
+  menuOptionBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+
+  // Submenu Styles
+  submenuContainer: {
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  submenuInstruction: {
+    fontSize: 13,
+    color: '#94a3b8',
+    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  submenuOptionBtn: {
+    width: '100%',
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    borderWidth: 1.2,
+    borderColor: '#06b6d4',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submenuOptionBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  submenuBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 8,
+  },
+  submenuBackBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#ccff00',
   },
 });

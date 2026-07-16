@@ -17,6 +17,7 @@ interface GrandSlamScoreboardProps {
   elapsedTime: string;
   isVoiceMuted: boolean;
   onToggleMute: () => void;
+  isPaused?: boolean;
 }
 
 export default function GrandSlamScoreboard({
@@ -26,6 +27,7 @@ export default function GrandSlamScoreboard({
   elapsedTime,
   isVoiceMuted,
   onToggleMute,
+  isPaused = false,
 }: GrandSlamScoreboardProps) {
   const { config, setScores, currentSetIndex, isTieBreak, isMatchTieBreak, server, winner } = matchState;
   const { width, height } = useWindowDimensions();
@@ -136,11 +138,11 @@ export default function GrandSlamScoreboard({
                 isWinner && styles.winnerPlayerRow,
               ]}
               onPress={() => {
-                if (winner === null) {
+                if (winner === null && !isPaused) {
                   onAddPoint(playerNum);
                 }
               }}
-              disabled={winner !== null}
+              disabled={winner !== null || isPaused}
             >
               {/* Name, Country, Seed, Serve dot */}
               <View style={[styles.playerCell, styles.playerColumn]}>

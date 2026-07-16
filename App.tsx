@@ -21,6 +21,8 @@ import {
   addPoint,
   undo,
   toggleCourtSide,
+  retireMatch,
+  abandonMatch,
   INITIAL_CONFIG,
 } from './src/utils/tennisEngine';
 import { MultiplayerSessionState } from './src/utils/multiplayerEngine';
@@ -230,6 +232,42 @@ export default function App() {
     setIsVoiceMuted(!isVoiceMuted);
   };
 
+  const handleRetireMatch = (retiredPlayer: 1 | 2, reason: 'injury' | 'forfeit') => {
+    const currentState = matchStateRef.current;
+    if (!currentState) return;
+    const updatedState = retireMatch(currentState, retiredPlayer, reason);
+    setMatchState(updatedState);
+    if (!isVoiceMuted) {
+      SpeechService.announceScore(updatedState);
+    }
+  };
+
+  const handleAbandonMatch = (reason: 'weather' | 'power_outage' | 'court_issue' | 'other') => {
+    const currentState = matchStateRef.current;
+    if (!currentState) return;
+    const updatedState = abandonMatch(currentState, reason);
+    setMatchState(updatedState);
+    if (!isVoiceMuted) {
+      SpeechService.announceScore(updatedState);
+    }
+  };
+
+  const handleResumeMatch = (savedMatch: any) => {
+    if (!savedMatch.rawState) return;
+    // Clean up winner/termination status since it's active again
+    const stateToResume: MatchState = {
+      ...savedMatch.rawState,
+      winner: null,
+      terminationType: undefined,
+      retiredPlayer: undefined,
+      retirementReason: undefined,
+      abandonmentReason: undefined,
+      resumedMatchId: savedMatch.id, // Reference to delete upon final saving
+    };
+    setMatchState(stateToResume);
+    setScreen('game');
+  };
+
   const handleLanguageChange = (lang: 'pt' | 'en' | 'es') => {
     setLanguage(lang);
   };
@@ -406,6 +444,8 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onToggleSide={handleToggleSide}
           physicalMappings={physicalMappings}
+          onRetireMatch={handleRetireMatch}
+          onAbandonMatch={handleAbandonMatch}
         />
       )}
 
@@ -413,6 +453,7 @@ export default function App() {
         <HistoryScreen
           onBack={() => setScreen('home')}
           language={language}
+          onResumeMatch={handleResumeMatch}
         />
       )}
 

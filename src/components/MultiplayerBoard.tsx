@@ -454,7 +454,7 @@ export default function MultiplayerBoard({
 
   const t = labels[language] || labels.pt;
 
-  const scoreFontSize = isLandscape ? Math.min(height * 0.48, 200) : 90;
+  const scoreFontSize = isLandscape ? Math.min(height * 0.58, 220) : 90;
 
   return (
     <View 

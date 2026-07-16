@@ -68,6 +68,12 @@ export interface MatchState {
   winner: 1 | 2 | null;
   courtSideSwapped: boolean; // false = player 1 on left/top, true = player 2 on left/top
   pointsHistory: PointHistoryEntry[]; // point-by-point history tracking
+  terminationType?: 'completed' | 'retired' | 'abandoned';
+  retiredPlayer?: 1 | 2;
+  retirementReason?: 'injury' | 'forfeit';
+  abandonmentReason?: 'weather' | 'power_outage' | 'court_issue' | 'other';
+  elapsedSeconds?: number;
+  resumedMatchId?: string;
   history: Omit<MatchState, 'history'>[];
 }
 
@@ -527,6 +533,45 @@ export function toggleCourtSide(state: MatchState): MatchState {
   };
 }
 
+// Retire a match due to forfeit or injury
+export function retireMatch(
+  state: MatchState,
+  retiredPlayer: 1 | 2,
+  reason: 'injury' | 'forfeit'
+): MatchState {
+  if (state.winner !== null) {
+    return state; // Match already finished
+  }
+  const historyCopy = [...state.history, copyStateForHistory(state)];
+  const winner = retiredPlayer === 1 ? 2 : 1;
+  return {
+    ...state,
+    winner,
+    terminationType: 'retired',
+    retiredPlayer,
+    retirementReason: reason,
+    history: historyCopy,
+  };
+}
+
+// Abandon a match due to external factors
+export function abandonMatch(
+  state: MatchState,
+  reason: 'weather' | 'power_outage' | 'court_issue' | 'other'
+): MatchState {
+  if (state.winner !== null) {
+    return state; // Match already finished
+  }
+  const historyCopy = [...state.history, copyStateForHistory(state)];
+  return {
+    ...state,
+    winner: null, // Abandoned matches do not have a winner
+    terminationType: 'abandoned',
+    abandonmentReason: reason,
+    history: historyCopy,
+  };
+}
+
 // Generate the speech text based on the match state
 export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2): string {
   const lang = state.config.language || 'pt';
@@ -585,9 +630,55 @@ export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2
 
   const t = dict[lang] || dict.pt;
 
+  // If match is abandoned
+  if (state.terminationType === 'abandoned') {
+    const reasonText = {
+      weather: {
+        pt: 'chuva ou clima',
+        en: 'rain or weather conditions',
+        es: 'lluvia o clima',
+      },
+      power_outage: {
+        pt: 'falta de energia',
+        en: 'power outage',
+        es: 'falta de energía',
+      },
+      court_issue: {
+        pt: 'problemas na quadra ou rede',
+        en: 'court or net issues',
+        es: 'problemas en la cancha o red',
+      },
+      other: {
+        pt: 'motivos de força maior',
+        en: 'unforeseen circumstances',
+        es: 'motivos de fuerza mayor',
+      },
+    }[state.abandonmentReason || 'other'][lang] || 'chuva';
+
+    const speechText = {
+      pt: `Partida suspensa devido a ${reasonText}. Sem vencedor definido.`,
+      en: `Match suspended due to ${reasonText}. No winner declared.`,
+      es: `Partido suspendido debido a ${reasonText}. Sin ganador definido.`,
+    };
+    return speechText[lang] || speechText.pt;
+  }
+
   // If match is won
   if (state.winner !== null) {
     const winnerName = state.winner === 1 ? state.config.player1Name : state.config.player2Name;
+    if (state.terminationType === 'retired') {
+      const retiredName = state.retiredPlayer === 1 ? state.config.player1Name : state.config.player2Name;
+      const reasonText = state.retirementReason === 'injury'
+        ? (lang === 'pt' ? 'lesão' : lang === 'es' ? 'lesión' : 'injury')
+        : (lang === 'pt' ? 'desistência' : lang === 'es' ? 'desistencia' : 'withdrawal');
+      
+      const retiredSpeech = {
+        pt: `Fim de jogo. Vitória de ${winnerName} por ${reasonText} de ${retiredName}.`,
+        en: `Game, set and match, ${winnerName}. Won by ${retiredName}'s ${reasonText}.`,
+        es: `Fin del partido. Victoria de ${winnerName} por ${reasonText} de ${retiredName}.`,
+      };
+      return retiredSpeech[lang] || retiredSpeech.pt;
+    }
     return t.matchWon(winnerName);
   }
 
