@@ -468,20 +468,32 @@ export default function ScoreboardView({
       ? (config.language === 'pt' ? 'lesão' : config.language === 'es' ? 'lesión' : 'injury')
       : (config.language === 'pt' ? 'desistência' : config.language === 'es' ? 'desistencia' : 'forfeit');
 
-    Alert.alert(
-      config.language === 'pt' ? 'Confirmar Encerramento' : 'Confirm Early End',
-      config.language === 'pt'
-        ? `Confirmar a vitória de ${opponentName} devido a ${reasonText} de ${playerName}?`
-        : `Confirm victory of ${opponentName} due to ${playerName}'s ${reasonText}?`,
-      [
-        { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
-        { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: () => {
-          setShowOptionsMenu(false);
-          setIsPaused(false);
-          onRetireMatch(player, reason);
-        }}
-      ]
-    );
+    const title = config.language === 'pt' ? 'Confirmar Encerramento' : 'Confirm Early End';
+    const message = config.language === 'pt'
+      ? `Confirmar a vitória de ${opponentName} devido a ${reasonText} de ${playerName}?`
+      : `Confirm victory of ${opponentName} due to ${playerName}'s ${reasonText}?`;
+
+    const handleConfirm = () => {
+      setShowOptionsMenu(false);
+      setIsPaused(false);
+      onRetireMatch(player, reason);
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`${title}\n\n${message}`);
+      if (confirmed) {
+        handleConfirm();
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+          { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: handleConfirm }
+        ]
+      );
+    }
   };
 
   const confirmAbandonment = (reason: 'weather' | 'power_outage' | 'court_issue' | 'other') => {
@@ -492,20 +504,32 @@ export default function ScoreboardView({
       other: config.language === 'pt' ? 'Outro Motivo' : 'Other reason',
     }[reason];
 
-    Alert.alert(
-      config.language === 'pt' ? 'Confirmar Suspensão' : 'Confirm Suspension',
-      config.language === 'pt'
-        ? `Deseja suspender a partida devido a: ${reasonLabel}? Ela será salva sem vencedor e poderá ser retomada depois.`
-        : `Do you want to suspend the match due to: ${reasonLabel}? It will be saved without a winner and can be resumed later.`,
-      [
-        { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
-        { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: () => {
-          setShowOptionsMenu(false);
-          setIsPaused(false);
-          onAbandonMatch(reason);
-        }}
-      ]
-    );
+    const title = config.language === 'pt' ? 'Confirmar Suspensão' : 'Confirm Suspension';
+    const message = config.language === 'pt'
+      ? `Deseja suspender a partida devido a: ${reasonLabel}? Ela será salva sem vencedor e poderá ser retomada depois.`
+      : `Do you want to suspend the match due to: ${reasonLabel}? It will be saved without a winner and can be resumed later.`;
+
+    const handleConfirm = () => {
+      setShowOptionsMenu(false);
+      setIsPaused(false);
+      onAbandonMatch(reason);
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm(`${title}\n\n${message}`);
+      if (confirmed) {
+        handleConfirm();
+      }
+    } else {
+      Alert.alert(
+        title,
+        message,
+        [
+          { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+          { text: config.language === 'pt' ? 'Confirmar' : 'Confirm', onPress: handleConfirm }
+        ]
+      );
+    }
   };
 
   // Calculate dynamic font size for the score numbers
@@ -752,10 +776,15 @@ export default function ScoreboardView({
                     await historyService.deleteMatch(matchState.resumedMatchId);
                   }
                   setIsSaved(true);
-                  Alert.alert(
-                    config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
-                    config.language === 'pt' ? 'Partida salva com sucesso!' : config.language === 'en' ? 'Match saved successfully!' : '¡Partido guardado con éxito!'
-                  );
+                  const successMsg = config.language === 'pt' ? 'Partida salva com sucesso!' : config.language === 'en' ? 'Match saved successfully!' : '¡Partido guardado con éxito!';
+                  if (Platform.OS === 'web') {
+                    window.alert(successMsg);
+                  } else {
+                    Alert.alert(
+                      config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
+                      successMsg
+                    );
+                  }
                 }
               }}
               disabled={isSaved}
@@ -966,17 +995,27 @@ export default function ScoreboardView({
                   <TouchableOpacity 
                     style={styles.menuOptionBtn} 
                     onPress={() => {
-                      Alert.alert(
-                        config.language === 'pt' ? 'Reiniciar Partida' : 'Reset Match',
-                        config.language === 'pt' ? 'Deseja reiniciar a pontuação deste jogo?' : 'Do you want to reset the score of this match?',
-                        [
-                          { text: config.language === 'pt' ? 'Não' : 'No', style: 'cancel' },
-                          { text: config.language === 'pt' ? 'Sim, Reiniciar' : 'Yes, Reset', style: 'destructive', onPress: () => {
-                            setShowOptionsMenu(false);
-                            onReset();
-                          }}
-                        ]
-                      );
+                      const title = config.language === 'pt' ? 'Reiniciar Partida' : 'Reset Match';
+                      const message = config.language === 'pt' ? 'Deseja reiniciar a pontuação deste jogo?' : 'Do you want to reset the score of this match?';
+                      const handleConfirm = () => {
+                        setShowOptionsMenu(false);
+                        onReset();
+                      };
+                      if (Platform.OS === 'web') {
+                        const confirmed = window.confirm(`${title}\n\n${message}`);
+                        if (confirmed) {
+                          handleConfirm();
+                        }
+                      } else {
+                        Alert.alert(
+                          title,
+                          message,
+                          [
+                            { text: config.language === 'pt' ? 'Não' : 'No', style: 'cancel' },
+                            { text: config.language === 'pt' ? 'Sim, Reiniciar' : 'Yes, Reset', style: 'destructive', onPress: handleConfirm }
+                          ]
+                        );
+                      }
                     }}
                   >
                     <Ionicons name="refresh-outline" size={20} color="#ef4444" style={{ marginRight: 10 }} />
@@ -989,17 +1028,27 @@ export default function ScoreboardView({
                   <TouchableOpacity 
                     style={styles.menuOptionBtn} 
                     onPress={() => {
-                      Alert.alert(
-                        config.language === 'pt' ? 'Sair da Partida' : 'Exit Match',
-                        config.language === 'pt' ? 'Deseja sair da partida? O progresso não salvo será perdido.' : 'Do you want to exit? Unsaved progress will be lost.',
-                        [
-                          { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
-                          { text: config.language === 'pt' ? 'Sair' : 'Exit', style: 'destructive', onPress: () => {
-                            setShowOptionsMenu(false);
-                            onReset();
-                          }}
-                        ]
-                      );
+                      const title = config.language === 'pt' ? 'Sair da Partida' : 'Exit Match';
+                      const message = config.language === 'pt' ? 'Deseja sair da partida? O progresso não salvo será perdido.' : 'Do you want to exit? Unsaved progress will be lost.';
+                      const handleConfirm = () => {
+                        setShowOptionsMenu(false);
+                        onReset();
+                      };
+                      if (Platform.OS === 'web') {
+                        const confirmed = window.confirm(`${title}\n\n${message}`);
+                        if (confirmed) {
+                          handleConfirm();
+                        }
+                      } else {
+                        Alert.alert(
+                          title,
+                          message,
+                          [
+                            { text: config.language === 'pt' ? 'Cancelar' : 'Cancel', style: 'cancel' },
+                            { text: config.language === 'pt' ? 'Sair' : 'Exit', style: 'destructive', onPress: handleConfirm }
+                          ]
+                        );
+                      }
                     }}
                   >
                     <Ionicons name="home-outline" size={20} color="#ef4444" style={{ marginRight: 10 }} />
