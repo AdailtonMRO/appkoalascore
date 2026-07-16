@@ -600,7 +600,11 @@ export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2
     if (p1TB === p2TB) {
       return t.superTBAll(p1TB);
     }
-    return t.superTB(p1TB, p2TB);
+    if (state.server === 1) {
+      return t.superTB(p1TB, p2TB);
+    } else {
+      return t.superTB(p2TB, p1TB);
+    }
   }
 
   // If set tie-break
@@ -610,7 +614,11 @@ export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2
     if (p1TB === p2TB) {
       return t.tbAll(p1TB);
     }
-    return t.tb(p1TB, p2TB);
+    if (state.server === 1) {
+      return t.tb(p1TB, p2TB);
+    } else {
+      return t.tb(p2TB, p1TB);
+    }
   }
 
   // Normal game scores
@@ -659,7 +667,11 @@ export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2
     return `${translatePoint(p1Display)} ${t.all}`;
   }
 
-  return `${translatePoint(p1Display)} ${t.to} ${translatePoint(p2Display)}`;
+  if (state.server === 1) {
+    return `${translatePoint(p1Display)} ${t.to} ${translatePoint(p2Display)}`;
+  } else {
+    return `${translatePoint(p2Display)} ${t.to} ${translatePoint(p1Display)}`;
+  }
 }
 
 export function calculateMatchStats(pointsHistory: PointHistoryEntry[]): MatchStats {
