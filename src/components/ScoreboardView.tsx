@@ -461,6 +461,75 @@ export default function ScoreboardView({
     SpeechService.announceScore(matchState);
   };
 
+  const saveAndExit = async (
+    finalWinner: 1 | 2 | null,
+    finalTerminationType: 'completed' | 'retired' | 'abandoned',
+    finalRetiredPlayer?: 1 | 2,
+    finalRetirementReason?: 'injury' | 'forfeit',
+    finalAbandonmentReason?: 'weather' | 'power_outage' | 'court_issue' | 'other'
+  ) => {
+    // 1. Construct rawState with final fields
+    const finalRawState: MatchState = {
+      ...matchState,
+      winner: finalWinner,
+      terminationType: finalTerminationType,
+      retiredPlayer: finalRetiredPlayer,
+      retirementReason: finalRetirementReason,
+      abandonmentReason: finalAbandonmentReason,
+      elapsedSeconds: elapsedSeconds,
+    };
+
+    // 2. Construct Match Data
+    const matchData = {
+      type: 'classic' as const,
+      player1Name: config.player1Name,
+      player2Name: config.player2Name,
+      setScores: setScores.map(s => ({
+        player1Games: s.player1Games,
+        player2Games: s.player2Games,
+        player1TieBreakPoints: s.player1TieBreakPoints,
+        player2TieBreakPoints: s.player2TieBreakPoints,
+      })),
+      winner: finalWinner,
+      setsToWin: config.setsToWin,
+      pointsHistory: matchState.pointsHistory || [],
+      stats: calculateMatchStats(matchState.pointsHistory || []),
+      totalDuration: formatElapsed(elapsedSeconds),
+      gameDurations: gameDurations.map(d => formatElapsed(d)),
+      terminationType: finalTerminationType,
+      retiredPlayer: finalRetiredPlayer,
+      retirementReason: finalRetirementReason,
+      abandonmentReason: finalAbandonmentReason,
+      rawState: finalRawState,
+    };
+
+    // 3. Save to database
+    const success = await historyService.saveMatch(matchData);
+    if (success) {
+      // 4. Clean up resumedMatchId if exists
+      if (matchState.resumedMatchId) {
+        await historyService.deleteMatch(matchState.resumedMatchId);
+      }
+      
+      // 5. Speak the announcement before exiting
+      if (!isVoiceMuted) {
+        SpeechService.announceScore(finalRawState);
+      }
+      
+      // 6. Navigate to Home
+      setShowOptionsMenu(false);
+      setIsPaused(false);
+      onReset();
+    } else {
+      const failMsg = config.language === 'pt' ? 'Erro ao salvar partida' : 'Error saving match';
+      if (Platform.OS === 'web') {
+        window.alert(failMsg);
+      } else {
+        Alert.alert('Error', failMsg);
+      }
+    }
+  };
+
   const confirmRetirement = (player: 1 | 2, reason: 'injury' | 'forfeit') => {
     const playerName = player === 1 ? config.player1Name : config.player2Name;
     const opponentName = player === 1 ? config.player2Name : config.player1Name;
@@ -473,10 +542,9 @@ export default function ScoreboardView({
       ? `Confirmar a vitória de ${opponentName} devido a ${reasonText} de ${playerName}?`
       : `Confirm victory of ${opponentName} due to ${playerName}'s ${reasonText}?`;
 
-    const handleConfirm = () => {
-      setShowOptionsMenu(false);
-      setIsPaused(false);
-      onRetireMatch(player, reason);
+    const handleConfirm = async () => {
+      const finalWinner: 1 | 2 = player === 1 ? 2 : 1;
+      await saveAndExit(finalWinner, 'retired', player, reason, undefined);
     };
 
     if (Platform.OS === 'web') {
@@ -509,10 +577,8 @@ export default function ScoreboardView({
       ? `Deseja suspender a partida devido a: ${reasonLabel}? Ela será salva sem vencedor e poderá ser retomada depois.`
       : `Do you want to suspend the match due to: ${reasonLabel}? It will be saved without a winner and can be resumed later.`;
 
-    const handleConfirm = () => {
-      setShowOptionsMenu(false);
-      setIsPaused(false);
-      onAbandonMatch(reason);
+    const handleConfirm = async () => {
+      await saveAndExit(null, 'abandoned', undefined, undefined, reason);
     };
 
     if (Platform.OS === 'web') {
