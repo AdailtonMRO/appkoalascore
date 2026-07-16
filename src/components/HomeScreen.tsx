@@ -297,7 +297,19 @@ export default function HomeScreen({
       {/* Menu Options */}
       <View style={styles.menuContainer}>
         {/* Quick Start Option */}
-        <TouchableOpacity style={styles.menuItem} onPress={onQuickStart}>
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => {
+            if (Platform.OS === 'web') {
+              try {
+                if (!document.fullscreenElement) {
+                  document.documentElement.requestFullscreen().catch(() => {});
+                }
+              } catch (e) {}
+            }
+            onQuickStart();
+          }}
+        >
           <View style={[styles.iconWrapper, { backgroundColor: '#ccff00' }]}>
             <Ionicons name="play" size={24} color="#0f172a" />
           </View>

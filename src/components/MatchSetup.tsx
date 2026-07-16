@@ -220,6 +220,13 @@ export default function MatchSetup({
       console.warn('Failed to save match config:', e);
     }
     
+    if (Platform.OS === 'web') {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (e) {}
+    }
     onStartMatch(finalConfig, firstServer);
   };
 

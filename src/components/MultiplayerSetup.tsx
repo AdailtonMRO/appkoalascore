@@ -50,6 +50,13 @@ export default function MultiplayerSetup({ onStart, onBack, language }: Multipla
     }
 
     const sessionState = createInitialSession(playerList, mode, bestOfGames);
+    if (Platform.OS === 'web') {
+      try {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } catch (e) {}
+    }
     onStart(sessionState);
   };
 

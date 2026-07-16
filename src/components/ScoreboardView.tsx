@@ -9,7 +9,9 @@ import {
   Alert,
   TextInput,
   Modal,
+  StatusBar,
 } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MatchState, getDisplayPoints, isServingFromDeuceCourt, calculateMatchStats } from '../utils/tennisEngine';
@@ -51,6 +53,70 @@ export default function ScoreboardView({
   const [optionsMenuSubview, setOptionsMenuSubview] = useState<'main' | 'retire_player_forfeit' | 'retire_player_injury' | 'abandon_reason'>('main');
 
   const [elapsedSeconds, setElapsedSeconds] = useState(matchState.elapsedSeconds || 0);
+  const [isFullscreenWeb, setIsFullscreenWeb] = useState(false);
+
+  // Lock to landscape and hide status bar on mount, restore on unmount
+  useEffect(() => {
+    async function lockOrientation() {
+      if (Platform.OS !== 'web') {
+        try {
+          await ScreenOrientation.lockAsync(
+            ScreenOrientation.OrientationLock.LANDSCAPE
+          );
+        } catch (e) {
+          console.warn('Failed to lock screen orientation', e);
+        }
+      }
+    }
+
+    lockOrientation();
+    StatusBar.setHidden(true, 'fade');
+
+    return () => {
+      async function unlockOrientation() {
+        if (Platform.OS !== 'web') {
+          try {
+            await ScreenOrientation.unlockAsync();
+          } catch (e) {
+            console.warn('Failed to unlock screen orientation', e);
+          }
+        }
+      }
+      unlockOrientation();
+      StatusBar.setHidden(false, 'fade');
+    };
+  }, []);
+
+  // Web fullscreen change listener
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleFullscreenChange = () => {
+      setIsFullscreenWeb(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreenWeb = () => {
+    if (Platform.OS !== 'web') return;
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          setIsFullscreenWeb(true);
+        }).catch((err) => {
+          console.warn('Error attempting to enable fullscreen:', err);
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          setIsFullscreenWeb(false);
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Fullscreen API error:', e);
+    }
+  };
 
   // Sync elapsedSeconds when matchState changes (e.g. loaded from history)
   useEffect(() => {
@@ -564,6 +630,25 @@ export default function ScoreboardView({
             {config.language === 'pt' ? 'Completo (Grand Slam)' : 'Grand Slam'}
           </Text>
         </TouchableOpacity>
+        {Platform.OS === 'web' && (
+          <TouchableOpacity 
+            style={[styles.modeToggleBtn, isFullscreenWeb && styles.modeToggleBtnActive, { marginLeft: 8 }]} 
+            onPress={toggleFullscreenWeb}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons 
+                name={isFullscreenWeb ? "contract" : "expand"} 
+                size={11} 
+                color={isFullscreenWeb ? "#0f172a" : "#94a3b8"} 
+              />
+              <Text style={[styles.modeToggleText, isFullscreenWeb && styles.modeToggleTextActive]}>
+                {isFullscreenWeb 
+                  ? (config.language === 'pt' ? 'Sair Tela Cheia' : 'Exit Fullscreen') 
+                  : (config.language === 'pt' ? 'Tela Cheia' : 'Fullscreen')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
 
       {scoreboardMode === 'grandslam' ? (

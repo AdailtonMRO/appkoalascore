@@ -9,7 +9,9 @@ import {
   Alert,
   Platform,
   useWindowDimensions,
+  StatusBar,
 } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { Ionicons } from '@expo/vector-icons';
 import {
   MultiplayerSessionState,
@@ -42,6 +44,70 @@ export default function MultiplayerBoard({
   const [newPlayerName, setNewPlayerName] = useState('');
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const [isFullscreenWeb, setIsFullscreenWeb] = useState(false);
+
+  // Lock to landscape and hide status bar on mount, restore on unmount
+  useEffect(() => {
+    async function lockOrientation() {
+      if (Platform.OS !== 'web') {
+        try {
+          await ScreenOrientation.lockAsync(
+            ScreenOrientation.OrientationLock.LANDSCAPE
+          );
+        } catch (e) {
+          console.warn('Failed to lock screen orientation', e);
+        }
+      }
+    }
+
+    lockOrientation();
+    StatusBar.setHidden(true, 'fade');
+
+    return () => {
+      async function unlockOrientation() {
+        if (Platform.OS !== 'web') {
+          try {
+            await ScreenOrientation.unlockAsync();
+          } catch (e) {
+            console.warn('Failed to unlock screen orientation', e);
+          }
+        }
+      }
+      unlockOrientation();
+      StatusBar.setHidden(false, 'fade');
+    };
+  }, []);
+
+  // Web fullscreen change listener
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleFullscreenChange = () => {
+      setIsFullscreenWeb(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  const toggleFullscreenWeb = () => {
+    if (Platform.OS !== 'web') return;
+    try {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().then(() => {
+          setIsFullscreenWeb(true);
+        }).catch((err) => {
+          console.warn('Error attempting to enable fullscreen:', err);
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          setIsFullscreenWeb(false);
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('Fullscreen API error:', e);
+    }
+  };
 
   // Gesture Responder references and handlers to support Beauty-R1 remote swipes
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
@@ -468,6 +534,27 @@ export default function MultiplayerBoard({
         <Text style={styles.formatText}>
           {state.bestOfGames === 3 ? t.bestOf3 : t.bestOf5}
         </Text>
+
+        {Platform.OS === 'web' && (
+          <TouchableOpacity 
+            style={styles.webFullscreenBtn} 
+            onPress={toggleFullscreenWeb}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons 
+                name={isFullscreenWeb ? "contract" : "expand"} 
+                size={12} 
+                color="#ccff00" 
+              />
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#ccff00' }}>
+                {isFullscreenWeb 
+                  ? (language === 'pt' ? 'TELA CHEIA (SAIR)' : 'FULLSCREEN (EXIT)') 
+                  : (language === 'pt' ? 'TELA CHEIA' : 'FULLSCREEN')}
+              </Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <Text style={[styles.formatText, { color: '#10b981' }]}>
           {t.serving}: {t.goldPoint}
         </Text>
@@ -653,6 +740,14 @@ const styles = StyleSheet.create({
   headerLandscape: {
     marginTop: 2,
     marginBottom: 4,
+  },
+  webFullscreenBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#ccff00',
+    backgroundColor: 'rgba(204, 255, 0, 0.05)',
   },
   formatText: {
     fontSize: 11,
