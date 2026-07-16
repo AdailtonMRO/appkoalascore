@@ -618,8 +618,7 @@ export default function ScoreboardView({
     >
       {server === 1 && (
         <View style={[styles.servingTag, isLandscape && styles.servingTagLandscape, { backgroundColor: '#06b6d4' }]}>
-          <Ionicons name="tennisball" size={isLandscape ? 12 : 14} color="#fff" />
-          <Text style={styles.servingTagText}>{t.serving}</Text>
+          <Ionicons name="tennisball" size={isLandscape ? 20 : 28} color="#fff" />
         </View>
       )}
 
@@ -664,8 +663,7 @@ export default function ScoreboardView({
     >
       {server === 2 && (
         <View style={[styles.servingTag, isLandscape && styles.servingTagLandscape, { backgroundColor: '#f97316' }]}>
-          <Ionicons name="tennisball" size={isLandscape ? 12 : 14} color="#fff" />
-          <Text style={styles.servingTagText}>{t.serving}</Text>
+          <Ionicons name="tennisball" size={isLandscape ? 20 : 28} color="#fff" />
         </View>
       )}
 
@@ -1407,21 +1405,25 @@ const styles = StyleSheet.create({
   },
   servingTag: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    flexDirection: 'row',
+    top: 12,
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   servingTagLandscape: {
-    top: 4,
-    right: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-    borderRadius: 4,
+    top: 6,
+    right: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   servingTagText: {
     fontSize: 9,
