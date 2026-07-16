@@ -463,7 +463,7 @@ export default function HomeScreen({
 
         {/* Ad Space: AdSense on Web, AdMob on Mobile */}
         {Platform.OS === 'web' ? (
-          <WebAdSense adClient="ca-pub-9278504866264813" adSlot="9550858432" />
+          <WebAdSense adClient="ca-pub-9278504866264813" adSlot="1616262169" />
         ) : (
           <>
             {/* Space for AdMob Native Ad */}
