@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Koala Tênis Score",
-    "slug": "koala-tenis-score",
+    "slug": "app-placar-celular",
     "version": "1.0.1",
     "orientation": "default",
     "icon": "./assets/icon.png",
@@ -11,7 +11,12 @@
       "bundleIdentifier": "com.adailtonmro.koalatenisscore",
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar.",
-        "NSBluetoothPeripheralUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar."
+        "NSBluetoothPeripheralUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar.",
+        "UIBackgroundModes": [
+          "audio",
+          "audio"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -22,7 +27,12 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.adailtonmro.koalatenisscore"
+      "package": "com.adailtonmro.koalatenisscore",
+      "permissions": [
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_ADMIN",
+        "android.permission.BLUETOOTH_CONNECT"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -40,7 +50,14 @@
           "icons": [
             {
               "src": "./assets/icon.png",
-              "sizes": [96, 128, 192, 256, 384, 512],
+              "sizes": [
+                96,
+                128,
+                192,
+                256,
+                384,
+                512
+              ],
               "type": "image/png"
             }
           ]
@@ -55,7 +72,10 @@
         "react-native-ble-plx",
         {
           "isBackgroundEnabled": false,
-          "modes": ["peripheral", "central"],
+          "modes": [
+            "peripheral",
+            "central"
+          ],
           "bluetoothAlwaysPermission": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar."
         }
       ],

@@ -9,6 +9,8 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  DeviceEventEmitter,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { bleService, BleDevice, BleConnectionState } from '../services/bleService';
@@ -25,6 +27,10 @@ interface BluetoothConnectorProps {
   onToggleMute: () => void;
   physicalMappings: Record<string, string>;
   onUpdatePhysicalMapping: (input: string, action: string) => void;
+  session: any;
+  userApiKey: string | null;
+  userTier: 'free' | 'pro';
+  onNavigateToLogin: () => void;
 }
 
 export default function BluetoothConnector({
@@ -39,6 +45,10 @@ export default function BluetoothConnector({
   onToggleMute,
   physicalMappings,
   onUpdatePhysicalMapping,
+  session,
+  userApiKey,
+  userTier,
+  onNavigateToLogin,
 }: BluetoothConnectorProps) {
   const [connectionState, setConnectionState] = useState<BleConnectionState>('disconnected');
   const [scannedDevices, setScannedDevices] = useState<BleDevice[]>([]);
@@ -98,6 +108,17 @@ export default function BluetoothConnector({
     }
   }, [recordingAction]);
 
+  // Listen to BluetoothMediaKey events while recording a mapping
+  useEffect(() => {
+    if (recordingAction) {
+      const sub = DeviceEventEmitter.addListener('BluetoothMediaKey', (key) => {
+        onUpdatePhysicalMapping(`key_${key}`, recordingAction);
+        setRecordingAction(null);
+      });
+      return () => sub.remove();
+    }
+  }, [recordingAction, onUpdatePhysicalMapping]);
+
   const handleRecordKeyPress = (e: any) => {
     const key = e.nativeEvent.key;
     if (recordingAction) {
@@ -147,6 +168,20 @@ export default function BluetoothConnector({
             keyName = language === 'pt' ? 'Pág. Cima (PageUp)' : language === 'es' ? 'Pág. Arriba (PageUp)' : 'Page Up';
           } else if (rawKey === 'PageDown') {
             keyName = language === 'pt' ? 'Pág. Baixo (PageDown)' : language === 'es' ? 'Pág. Abajo (PageDown)' : 'Page Down';
+          } else if (rawKey === 'volume_up') {
+            keyName = language === 'pt' ? 'Botão Aumentar Volume' : language === 'es' ? 'Botón Subir Volumen' : 'Volume Up Button';
+          } else if (rawKey === 'volume_down') {
+            keyName = language === 'pt' ? 'Botão Diminuir Volume' : language === 'es' ? 'Botón Bajar Volumen' : 'Volume Down Button';
+          } else if (rawKey === 'media_play') {
+            keyName = language === 'pt' ? 'Botão Play' : language === 'es' ? 'Botón Reproducir' : 'Play Button';
+          } else if (rawKey === 'media_pause') {
+            keyName = language === 'pt' ? 'Botão Pause' : language === 'es' ? 'Botón Pausar' : 'Pause Button';
+          } else if (rawKey === 'media_next') {
+            keyName = language === 'pt' ? 'Botão Avançar Música (Next)' : language === 'es' ? 'Botón Siguiente' : 'Next Track Button';
+          } else if (rawKey === 'media_previous') {
+            keyName = language === 'pt' ? 'Botão Voltar Música (Prev)' : language === 'es' ? 'Botón Anterior' : 'Previous Track Button';
+          } else if (rawKey === 'media_togglePlayPause') {
+            keyName = language === 'pt' ? 'Botão Play/Pause' : language === 'es' ? 'Botón Reproducir/Pausar' : 'Play/Pause Button';
           }
           label = `${language === 'pt' ? 'Tecla' : language === 'es' ? 'Tecla' : 'Key'} '${keyName}'`;
         }
@@ -581,6 +616,73 @@ export default function BluetoothConnector({
           <Ionicons name="play" size={16} color="#0f172a" />
           <Text style={styles.diagBtnText}>{t.diagBtn}</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Smart Watch Remote Configuration Panel */}
+      <View style={styles.statusCard}>
+        <View style={styles.diagHeader}>
+          <Ionicons name="watch-outline" size={20} color="#ccff00" />
+          <Text style={[styles.diagTitle, { marginLeft: 8 }]}>
+            {language === 'pt' ? 'Controle por Smart Watch (Pro)' : language === 'es' ? 'Control por Smart Watch (Pro)' : 'Smart Watch Control (Pro)'}
+          </Text>
+        </View>
+
+        {!session ? (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.diagDesc}>
+              {language === 'pt' 
+                ? 'Faça login para salvar suas configurações e liberar o controle remoto pelo Apple Watch.' 
+                : 'Please log in to save your settings and unlock Apple Watch remote control.'}
+            </Text>
+            <TouchableOpacity style={styles.diagBtn} onPress={onNavigateToLogin}>
+              <Ionicons name="log-in-outline" size={16} color="#0f172a" />
+              <Text style={styles.diagBtnText}>
+                {language === 'pt' ? 'Fazer Login / Cadastro' : 'Log In / Sign Up'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.diagDesc}>
+              {language === 'pt' 
+                ? 'Envie comandos para o seu placar a partir do seu Apple Watch usando atalhos personalizados.'
+                : 'Send commands to your scoreboard from your Apple Watch using custom shortcuts.'}
+            </Text>
+
+            <View style={styles.apiKeyBox}>
+              <Text style={styles.apiKeyLabel}>Sua Chave de API Secreta:</Text>
+              <Text style={styles.apiKeyValue} selectable={true}>{userApiKey || 'Gerando chave...'}</Text>
+            </View>
+
+            <View style={styles.instructionsBox}>
+              <Text style={styles.instructionsTitle}>Configuração Passo a Passo (Atalhos iOS):</Text>
+              <Text style={styles.instructionStep}>1. Abra o app "Atalhos" no iPhone e crie um novo atalho.</Text>
+              <Text style={styles.instructionStep}>2. Adicione a ação "Obter Conteúdo da URL".</Text>
+              <Text style={styles.instructionStep}>3. Configure a URL como:</Text>
+              <Text style={styles.urlCode}>
+                https://{process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('https://', '') || 'sua-url-supabase.supabase.co'}/rest/v1/watch_events
+              </Text>
+              <Text style={styles.instructionStep}>4. Altere o método de requisição para "POST".</Text>
+              <Text style={styles.instructionStep}>5. Adicione os seguintes cabeçalhos (Headers):</Text>
+              <Text style={styles.headerCode}>
+                apikey: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 15) || 'sua-chave'}...{'\n'}
+                Authorization: Bearer {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 15) || 'sua-chave'}...
+              </Text>
+              <Text style={styles.instructionStep}>6. No corpo do JSON (Request Body), insira:</Text>
+              <Text style={styles.jsonCode}>
+                {`{
+  "api_key": "${userApiKey || 'SUA_CHAVE_API'}",
+  "action": "addPointP1"
+}`}
+              </Text>
+              <Text style={styles.instructionStep}>7. Ações suportadas em "action":</Text>
+              <Text style={styles.bulletStep}>• "addPointP1" - Ponto para Jogador 1</Text>
+              <Text style={styles.bulletStep}>• "addPointP2" - Ponto para Jogador 2</Text>
+              <Text style={styles.bulletStep}>• "undo" - Desfazer último ponto</Text>
+              <Text style={styles.bulletStep}>• "reset" - Reiniciar a partida</Text>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* Action Selector Modal */}
@@ -1433,5 +1535,84 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     textAlign: 'center',
+  },
+  apiKeyBox: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  apiKeyLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  apiKeyValue: {
+    color: '#ccff00',
+    fontSize: 14,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '800',
+  },
+  instructionsBox: {
+    marginTop: 16,
+    backgroundColor: 'rgba(15, 23, 42, 0.3)',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.03)',
+  },
+  instructionsTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  instructionStep: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 6,
+  },
+  bulletStep: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginLeft: 10,
+    marginTop: 2,
+  },
+  urlCode: {
+    backgroundColor: '#090d16',
+    color: '#38bdf8',
+    padding: 8,
+    borderRadius: 6,
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.2)',
+  },
+  headerCode: {
+    backgroundColor: '#090d16',
+    color: '#10b981',
+    padding: 8,
+    borderRadius: 6,
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  jsonCode: {
+    backgroundColor: '#090d16',
+    color: '#fb7185',
+    padding: 8,
+    borderRadius: 6,
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(251, 113, 133, 0.2)',
   },
 });

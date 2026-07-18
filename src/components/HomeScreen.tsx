@@ -70,13 +70,17 @@ function WebAdSense({ adClient, adSlot }: { adClient: string; adSlot: string }) 
 }
 
 interface HomeScreenProps {
-  onNavigate: (screen: 'setup' | 'remote' | 'history' | 'multiplayer_setup' | 'help') => void;
+  onNavigate: (screen: 'setup' | 'remote' | 'history' | 'multiplayer_setup' | 'help' | 'login') => void;
   language: 'pt' | 'en' | 'es';
   onLanguageChange: (lang: 'pt' | 'en' | 'es') => void;
   connectionState: BleConnectionState;
   isVoiceMuted: boolean;
   onToggleMute: () => void;
   onQuickStart: () => void;
+  session: any;
+  onLoginPress: () => void;
+  onLogoutPress: () => void;
+  userTier: 'free' | 'pro';
 }
 
 export default function HomeScreen({
@@ -87,6 +91,10 @@ export default function HomeScreen({
   isVoiceMuted,
   onToggleMute,
   onQuickStart,
+  session,
+  onLoginPress,
+  onLogoutPress,
+  userTier,
 }: HomeScreenProps) {
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [adLoaded, setAdLoaded] = useState(false);
@@ -273,7 +281,7 @@ export default function HomeScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Top right mute button */}
+      {/* Top right controls (mute & profile) */}
       <View style={styles.topRightControls}>
         <TouchableOpacity style={styles.muteButton} onPress={onToggleMute}>
           <Ionicons 
@@ -282,6 +290,16 @@ export default function HomeScreen({
             color={isVoiceMuted ? "#ef4444" : "#ccff00"} 
           />
         </TouchableOpacity>
+        
+        {session ? (
+          <TouchableOpacity style={styles.profileButton} onPress={onLogoutPress}>
+            <Ionicons name="log-out-outline" size={22} color="#ef4444" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.profileButton} onPress={onLoginPress}>
+            <Ionicons name="person-circle-outline" size={22} color="#ccff00" />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Brand Header */}
@@ -458,79 +476,81 @@ export default function HomeScreen({
       </View>
 
       {/* Advertising / Sponsors Area */}
-      <View style={styles.adAreaContainer}>
-        <Text style={styles.adAreaLabel}>{t.adAreaLabel}</Text>
-        
-        {/* Course Promo Banner */}
-        <TouchableOpacity style={styles.promoBanner} onPress={handlePressBanner}>
-          <View style={styles.promoIconWrapper}>
-            <Ionicons name="build" size={20} color="#ccff00" />
-          </View>
-          <View style={styles.promoTextCol}>
-            <Text style={styles.promoTitle}>{t.promoTitle}</Text>
-            <Text style={styles.promoDesc}>{t.promoDesc}</Text>
-          </View>
-          <Ionicons name="open-outline" size={16} color="#ccff00" />
-        </TouchableOpacity>
+      {userTier === 'free' && (
+        <View style={styles.adAreaContainer}>
+          <Text style={styles.adAreaLabel}>{t.adAreaLabel}</Text>
+          
+          {/* Course Promo Banner */}
+          <TouchableOpacity style={styles.promoBanner} onPress={handlePressBanner}>
+            <View style={styles.promoIconWrapper}>
+              <Ionicons name="build" size={20} color="#ccff00" />
+            </View>
+            <View style={styles.promoTextCol}>
+              <Text style={styles.promoTitle}>{t.promoTitle}</Text>
+              <Text style={styles.promoDesc}>{t.promoDesc}</Text>
+            </View>
+            <Ionicons name="open-outline" size={16} color="#ccff00" />
+          </TouchableOpacity>
 
-        {/* Ad Space: AdSense on Web, AdMob on Mobile */}
-        {Platform.OS === 'web' ? (
-          <WebAdSense adClient="ca-pub-9278504866264813" adSlot="1616262169" />
-        ) : (
-          <>
-            {/* Space for AdMob Native Ad */}
-            {(!adFailed && nativeAd) ? (
-              <NativeAdView
-                nativeAd={nativeAd}
-                style={styles.adContainer}
-              >
-                <View style={styles.adContent}>
-                  <View style={styles.adHeader}>
-                    {nativeAd.icon && (
-                      <NativeAsset assetType={NativeAssetType.ICON}>
-                        <Image style={styles.adIcon} source={{ uri: nativeAd.icon.url }} />
-                      </NativeAsset>
-                    )}
-                    <View style={styles.adTextContainer}>
-                      <NativeAsset assetType={NativeAssetType.HEADLINE}>
-                        <Text style={styles.adHeadline}>{nativeAd.headline}</Text>
-                      </NativeAsset>
-                      {nativeAd.advertiser && (
-                        <NativeAsset assetType={NativeAssetType.ADVERTISER}>
-                          <Text style={styles.adAdvertiser}>{nativeAd.advertiser}</Text>
+          {/* Ad Space: AdSense on Web, AdMob on Mobile */}
+          {Platform.OS === 'web' ? (
+            <WebAdSense adClient="ca-pub-9278504866264813" adSlot="1616262169" />
+          ) : (
+            <>
+              {/* Space for AdMob Native Ad */}
+              {(!adFailed && nativeAd) ? (
+                <NativeAdView
+                  nativeAd={nativeAd}
+                  style={styles.adContainer}
+                >
+                  <View style={styles.adContent}>
+                    <View style={styles.adHeader}>
+                      {nativeAd.icon && (
+                        <NativeAsset assetType={NativeAssetType.ICON}>
+                          <Image style={styles.adIcon} source={{ uri: nativeAd.icon.url }} />
                         </NativeAsset>
                       )}
-                    </View>
-                    <View style={styles.adBadge}>
-                      <Text style={styles.adBadgeText}>Ad</Text>
-                    </View>
-                  </View>
-                  {nativeAd.body && (
-                    <NativeAsset assetType={NativeAssetType.BODY}>
-                      <Text style={styles.adTagline}>{nativeAd.body}</Text>
-                    </NativeAsset>
-                  )}
-                  {nativeAd.callToAction && (
-                    <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
-                      <View style={styles.adCta}>
-                        <Text style={styles.adCtaText}>{nativeAd.callToAction}</Text>
+                      <View style={styles.adTextContainer}>
+                        <NativeAsset assetType={NativeAssetType.HEADLINE}>
+                          <Text style={styles.adHeadline}>{nativeAd.headline}</Text>
+                        </NativeAsset>
+                        {nativeAd.advertiser && (
+                          <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+                            <Text style={styles.adAdvertiser}>{nativeAd.advertiser}</Text>
+                          </NativeAsset>
+                        )}
                       </View>
-                    </NativeAsset>
-                  )}
-                </View>
-              </NativeAdView>
-            ) : null}
+                      <View style={styles.adBadge}>
+                        <Text style={styles.adBadgeText}>Ad</Text>
+                      </View>
+                    </View>
+                    {nativeAd.body && (
+                      <NativeAsset assetType={NativeAssetType.BODY}>
+                        <Text style={styles.adTagline}>{nativeAd.body}</Text>
+                      </NativeAsset>
+                    )}
+                    {nativeAd.callToAction && (
+                      <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+                        <View style={styles.adCta}>
+                          <Text style={styles.adCtaText}>{nativeAd.callToAction}</Text>
+                        </View>
+                      </NativeAsset>
+                    )}
+                  </View>
+                </NativeAdView>
+              ) : null}
 
-            {/* Space for future ads (fallback/placeholder when AdMob is loading or failed) */}
-            {(!adLoaded || adFailed) && (
-              <View style={styles.adPlaceholder}>
-                <Ionicons name="megaphone-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
-                <Text style={styles.adPlaceholderText}>{t.adPlaceholderText}</Text>
-              </View>
-            )}
-          </>
-        )}
-      </View>
+              {/* Space for future ads (fallback/placeholder when AdMob is loading or failed) */}
+              {(!adLoaded || adFailed) && (
+                <View style={styles.adPlaceholder}>
+                  <Ionicons name="megaphone-outline" size={16} color="#64748b" style={{ marginRight: 8 }} />
+                  <Text style={styles.adPlaceholderText}>{t.adPlaceholderText}</Text>
+                </View>
+              )}
+            </>
+          )}
+        </View>
+      )}
 
       {/* Bluetooth Connection Status Footer */}
       <View style={styles.statusFooter}>
@@ -813,8 +833,18 @@ const styles = StyleSheet.create({
     top: 20,
     right: 20,
     zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   muteButton: {
+    padding: 10,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  profileButton: {
     padding: 10,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',
     borderRadius: 12,

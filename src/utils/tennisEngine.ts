@@ -10,6 +10,7 @@ export interface TennisConfig {
   noAdScoring: boolean; // default false (false = Advantage, true = No-Ad)
   language: 'pt' | 'en' | 'es';
   autoSideChange: boolean; // default true
+  useIntervalTimer?: boolean; // default true
 }
 
 export interface PointHistoryEntry {
@@ -89,6 +90,7 @@ export const INITIAL_CONFIG: TennisConfig = {
   noAdScoring: false,
   language: 'pt',
   autoSideChange: true,
+  useIntervalTimer: true,
 };
 
 export function createInitialState(config: TennisConfig = INITIAL_CONFIG, firstServer: 1 | 2 = 1): MatchState {

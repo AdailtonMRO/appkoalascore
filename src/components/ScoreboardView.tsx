@@ -10,6 +10,8 @@ import {
   TextInput,
   Modal,
   StatusBar,
+  Vibration,
+  Animated,
 } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,6 +56,215 @@ export default function ScoreboardView({
 
   const [elapsedSeconds, setElapsedSeconds] = useState(matchState.elapsedSeconds || 0);
   const [isFullscreenWeb, setIsFullscreenWeb] = useState(false);
+
+  // Interval Timer states
+  const [showTimerModal, setShowTimerModal] = useState(false);
+  const [timerSeconds, setTimerSeconds] = useState(0);
+  const [timerTotal, setTimerTotal] = useState(60);
+  const [timerType, setTimerType] = useState<'side' | 'set' | null>(null);
+
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const prevMatchStateRef = useRef<MatchState | null>(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  // Pulse animation for the countdown timer circle
+  useEffect(() => {
+    let pulse: Animated.CompositeAnimation | null = null;
+    if (showTimerModal) {
+      pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.12,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1.0,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulse.start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+    return () => {
+      if (pulse) {
+        pulse.stop();
+      }
+    };
+  }, [showTimerModal]);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Web Oscillator alarm
+  const playWebBeep = () => {
+    if (Platform.OS !== 'web') return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      const playBeep = (delay: number, duration: number, freq: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+        
+        gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+        gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + delay + 0.02);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay + duration - 0.02);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + delay + duration);
+        
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + duration);
+      };
+
+      // Play double-beep alarm pattern
+      playBeep(0, 0.15, 880);
+      playBeep(0.2, 0.15, 880);
+      playBeep(0.4, 0.35, 987);
+    } catch (e) {
+      console.warn('Web Audio error:', e);
+    }
+  };
+
+  const playAlarm = (type: 'side' | 'set') => {
+    // 1. Play oscillator sound on Web
+    if (Platform.OS === 'web') {
+      playWebBeep();
+    }
+    
+    // 2. Play speech description (cross-platform offline TTS)
+    if (!isVoiceMuted) {
+      const lang = config.language || 'pt';
+      const speechTexts = {
+        side: {
+          pt: 'Tempo de intervalo encerrado. Troca de lados.',
+          en: "Interval time is over. Swap ends.",
+          es: 'Tiempo de intervalo finalizado. Cambio de lados.',
+        },
+        set: {
+          pt: 'Intervalo encerrado. Início do próximo set.',
+          en: "Interval is over. Start of next set.",
+          es: 'Intervalo finalizado. Inicio del próximo set.',
+        },
+      };
+      const text = speechTexts[type]?.[lang] || speechTexts[type]?.pt;
+      SpeechService.speak(text, lang);
+    }
+
+    // 3. Vibrate device (native)
+    try {
+      Vibration.vibrate([0, 500, 200, 500]);
+    } catch (e) {
+      console.warn('Vibration failed:', e);
+    }
+  };
+
+  const startTimer = (type: 'side' | 'set') => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    const duration = type === 'side' ? 60 : 120;
+    setTimerSeconds(duration);
+    setTimerTotal(duration);
+    setTimerType(type);
+    setShowTimerModal(true);
+
+    timerIntervalRef.current = setInterval(() => {
+      setTimerSeconds((prev) => {
+        if (prev <= 1) {
+          if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+          }
+          playAlarm(type);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const skipTimer = () => {
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    setShowTimerModal(false);
+    setTimerType(null);
+  };
+
+  const formatTimer = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, '0')}`;
+  };
+
+  // Monitor matchState changes to trigger intervals automatically
+  useEffect(() => {
+    const prev = prevMatchStateRef.current;
+    prevMatchStateRef.current = matchState;
+
+    if (!prev) return;
+
+    // Do nothing if interval timers are disabled in the config
+    if (config.useIntervalTimer === false) {
+      return;
+    }
+
+    // Detect if undo was performed (history shrunk)
+    const isUndo = (matchState.pointsHistory || []).length < (prev.pointsHistory || []).length;
+    if (isUndo) {
+      skipTimer(); // dismiss timer silently
+      return;
+    }
+
+    // If match is won, don't show any timer overlays
+    if (winner !== null) {
+      skipTimer();
+      return;
+    }
+
+    // 1. Detect set changes
+    if (currentSetIndex > prev.currentSetIndex) {
+      startTimer('set');
+      return;
+    }
+
+    // 2. Detect side changes during standard games (games total is odd)
+    const prevSetGames = prev.setScores[prev.currentSetIndex];
+    const newSetGames = setScores[currentSetIndex];
+    if (prevSetGames && newSetGames) {
+      const prevTotalGames = prevSetGames.player1Games + prevSetGames.player2Games;
+      const newTotalGames = newSetGames.player1Games + newSetGames.player2Games;
+
+      if (newTotalGames > prevTotalGames && newTotalGames % 2 !== 0) {
+        startTimer('side');
+        return;
+      }
+    }
+  }, [matchState]);
+
+  // Auto-skip timer if point history length changes (scoring via remote controls/keys)
+  const prevHistoryLengthRef = useRef((matchState.pointsHistory || []).length);
+  useEffect(() => {
+    const currentLength = (matchState.pointsHistory || []).length;
+    if (showTimerModal && currentLength !== prevHistoryLengthRef.current) {
+      skipTimer();
+    }
+    prevHistoryLengthRef.current = currentLength;
+  }, [matchState.pointsHistory]);
 
   // Lock to landscape and hide status bar on mount, restore on unmount
   useEffect(() => {
@@ -885,25 +1096,7 @@ export default function ScoreboardView({
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.controlBtn, isLandscape && styles.controlBtnLandscape]} 
-            onPress={handleSpeakScore}
-          >
-            <Ionicons name="volume-high" size={isLandscape ? 16 : 20} color="#f8fafc" />
-            <Text style={[styles.controlBtnText, isLandscape && styles.controlBtnTextLandscape]} numberOfLines={1}>
-              {t.speakScore}
-            </Text>
-          </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.controlBtn, isLandscape && styles.controlBtnLandscape]} 
-            onPress={onToggleSide}
-          >
-            <Ionicons name="swap-horizontal" size={isLandscape ? 16 : 20} color="#f8fafc" />
-            <Text style={[styles.controlBtnText, isLandscape && styles.controlBtnTextLandscape]} numberOfLines={1}>
-              {t.swapSides}
-            </Text>
-          </TouchableOpacity>
 
           {winner !== null ? (
             <TouchableOpacity 
@@ -1019,6 +1212,20 @@ export default function ScoreboardView({
                         ? (config.language === 'pt' ? 'Retomar Cronômetro' : config.language === 'es' ? 'Retomar Cronómetro' : 'Resume Timer')
                         : (config.language === 'pt' ? 'Pausar Cronômetro' : config.language === 'es' ? 'Pausar Cronómetro' : 'Pause Timer')
                       }
+                    </Text>
+                  </TouchableOpacity>
+
+                  {/* Botão Inverter Lado */}
+                  <TouchableOpacity 
+                    style={styles.menuOptionBtn} 
+                    onPress={() => {
+                      onToggleSide();
+                      setShowOptionsMenu(false);
+                    }}
+                  >
+                    <Ionicons name="swap-horizontal" size={20} color="#ccff00" style={{ marginRight: 10 }} />
+                    <Text style={styles.menuOptionBtnText}>
+                      {t.swapSides}
                     </Text>
                   </TouchableOpacity>
 
@@ -1253,6 +1460,61 @@ export default function ScoreboardView({
         onKeyPress={handleKeyPress}
         onChangeText={handleTextChange}
       />
+
+      {/* Overlay do Temporizador de Intervalo */}
+      {showTimerModal && (
+        <View style={styles.timerBackdrop}>
+          <View style={[styles.timerContent, { borderColor: timerType === 'side' ? '#06b6d4' : '#f97316' }]}>
+            {/* Esquerda: Círculo regressivo pulsante */}
+            <Animated.View style={[styles.timerCircleContainer, { borderColor: timerType === 'side' ? '#06b6d4' : '#f97316', transform: [{ scale: pulseAnim }] }]}>
+              <Text style={styles.timerClockText}>{formatTimer(timerSeconds)}</Text>
+            </Animated.View>
+            
+            {/* Direita: Textos e Botões */}
+            <View style={styles.timerInfoSection}>
+              <Text style={[styles.timerTitle, { color: timerType === 'side' ? '#06b6d4' : '#f97316' }]}>
+                {timerType === 'side' 
+                  ? (config.language === 'pt' ? 'Troca de Lados' : config.language === 'es' ? 'Cambio de Lados' : 'Change Sides')
+                  : (config.language === 'pt' ? 'Intervalo de Set' : config.language === 'es' ? 'Intervalo de Set' : 'Set Break')}
+              </Text>
+              
+              <Text style={styles.timerSubtitle}>
+                {timerSeconds === 0 
+                  ? (config.language === 'pt' ? 'Tempo esgotado! Retome a partida.' : config.language === 'es' ? '¡Tiempo agotado! Retome el partido.' : "Time is up! Resume the match.")
+                  : timerType === 'side'
+                  ? (config.language === 'pt' ? 'Mude de lado na quadra.' : config.language === 'es' ? 'Cambie de lado en la cancha.' : 'Swap ends of the court.')
+                  : (config.language === 'pt' ? 'Descanse antes de iniciar o próximo set.' : config.language === 'es' ? 'Descanse antes de iniciar el siguiente set.' : 'Rest before starting the next set.')}
+              </Text>
+
+              <View style={styles.timerButtonRow}>
+                {/* Botão Pular (Retomar Jogo) */}
+                <TouchableOpacity 
+                  style={[styles.timerSkipBtn, timerSeconds === 0 && styles.timerStartBtnCompleted]} 
+                  onPress={skipTimer}
+                >
+                  <Ionicons name={timerSeconds === 0 ? "play" : "play-forward"} size={20} color="#090d16" style={{ marginRight: 6 }} />
+                  <Text style={styles.timerSkipBtnText}>
+                    {timerSeconds === 0
+                      ? (config.language === 'pt' ? 'Iniciar Jogo' : config.language === 'es' ? 'Iniciar Juego' : 'Start Play')
+                      : (config.language === 'pt' ? 'Pular Intervalo' : config.language === 'es' ? 'Omitir Intervalo' : 'Skip Break')}
+                  </Text>
+                </TouchableOpacity>
+
+                {/* Botão Desfazer (Caso o ponto que gerou o intervalo tenha sido erro) */}
+                <TouchableOpacity 
+                  style={styles.timerUndoBtn}
+                  onPress={() => {
+                    onUndo();
+                    skipTimer();
+                  }}
+                >
+                  <Ionicons name="arrow-undo" size={20} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -1827,5 +2089,100 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: '#ccff00',
+  },
+  
+  // Timer Overlay Styles
+  timerBackdrop: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(9, 13, 22, 0.92)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 150,
+    padding: 16,
+  },
+  timerContent: {
+    backgroundColor: '#090d16',
+    borderWidth: 2,
+    borderRadius: 20,
+    width: '90%',
+    maxWidth: 520,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  timerCircleContainer: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+  },
+  timerClockText: {
+    fontSize: 38,
+    fontWeight: '900',
+    color: '#f8fafc',
+    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+  },
+  timerInfoSection: {
+    flex: 1,
+    marginLeft: 20,
+    justifyContent: 'center',
+  },
+  timerTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  timerSubtitle: {
+    fontSize: 13,
+    color: '#94a3b8',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  timerButtonRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+  },
+  timerSkipBtn: {
+    backgroundColor: '#ccff00',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  timerStartBtnCompleted: {
+    backgroundColor: '#ef4444',
+  },
+  timerSkipBtnText: {
+    color: '#090d16',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  timerUndoBtn: {
+    borderWidth: 1.5,
+    borderColor: '#ef4444',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 12,
+    padding: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

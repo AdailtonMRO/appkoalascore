@@ -40,6 +40,7 @@ export default function MatchSetup({
   const [firstServer, setFirstServer] = useState<1 | 2>(initialConfig.autoSideChange !== undefined ? (initialConfig.player1Name === player1Name ? 1 : 2) : 1); // fallback check
   const [speechEnabled, setSpeechEnabled] = useState<boolean>(true);
   const [autoSideChange, setAutoSideChange] = useState<boolean>(initialConfig.autoSideChange ?? true);
+  const [useIntervalTimer, setUseIntervalTimer] = useState<boolean>(initialConfig.useIntervalTimer ?? true);
   const [showTieBreak, setShowTieBreak] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
 
@@ -59,6 +60,7 @@ export default function MatchSetup({
           if (parsed.useMatchTieBreakForFinalSet !== undefined) setUseMatchTieBreakForFinalSet(parsed.useMatchTieBreakForFinalSet);
           if (parsed.firstServer !== undefined) setFirstServer(parsed.firstServer);
           if (parsed.autoSideChange !== undefined) setAutoSideChange(parsed.autoSideChange);
+          if (parsed.useIntervalTimer !== undefined) setUseIntervalTimer(parsed.useIntervalTimer);
           if (parsed.speechEnabled !== undefined) {
             setSpeechEnabled(parsed.speechEnabled);
             SpeechService.setSpeechEnabled(parsed.speechEnabled);
@@ -110,6 +112,8 @@ export default function MatchSetup({
       ttsDesc: 'O celular anunciará o placar em voz alta a cada alteração.',
       autoSide: 'Troca Automática de Lado',
       autoSideDesc: 'Alterna automaticamente o lado dos jogadores no placar conforme a regra do tênis.',
+      useIntervalTimer: 'Cronômetro de Intervalos',
+      useIntervalTimerDesc: 'Inicia cronômetro regressivo na troca de lado (1 min) e de set (2 min).',
       start: 'INICIAR PARTIDA',
     },
     en: {
@@ -149,6 +153,8 @@ export default function MatchSetup({
       ttsDesc: 'The device will announce the score out loud on changes.',
       autoSide: 'Automatic Side Change',
       autoSideDesc: 'Automatically switch player sides on the scoreboard according to tennis rules.',
+      useIntervalTimer: 'Interval Timer',
+      useIntervalTimerDesc: 'Starts a countdown timer on side changes (1 min) and set breaks (2 min).',
       start: 'START MATCH',
     },
     es: {
@@ -188,6 +194,8 @@ export default function MatchSetup({
       ttsDesc: 'El dispositivo anunciará el marcador en voz alta al cambiar.',
       autoSide: 'Cambio Automático de Lado',
       autoSideDesc: 'Alterna automáticamente el lado de los jugadores en el marcador según las reglas del tenis.',
+      useIntervalTimer: 'Cronómetro de Intervalos',
+      useIntervalTimerDesc: 'Inicia un cronómetro regresivo al cambiar de lado (1 min) y en el cambio de set (2 min).',
       start: 'INICIAR PARTIDO',
     },
   };
@@ -207,6 +215,7 @@ export default function MatchSetup({
       noAdScoring,
       language,
       autoSideChange,
+      useIntervalTimer,
     };
     
     try {
@@ -498,6 +507,19 @@ export default function MatchSetup({
               <Switch
                 value={autoSideChange}
                 onValueChange={setAutoSideChange}
+                trackColor={{ false: '#334155', true: '#ccff00' }}
+                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+              />
+            </View>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelCol}>
+                <Text style={styles.switchLabel}>{t.useIntervalTimer}</Text>
+                <Text style={styles.switchDesc}>{t.useIntervalTimerDesc}</Text>
+              </View>
+              <Switch
+                value={useIntervalTimer}
+                onValueChange={setUseIntervalTimer}
                 trackColor={{ false: '#334155', true: '#ccff00' }}
                 thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
               />

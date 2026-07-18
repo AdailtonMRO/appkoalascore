@@ -3,6 +3,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Platform,
+  DeviceEventEmitter,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import HomeScreen from './src/components/HomeScreen';
@@ -14,6 +15,10 @@ import MultiplayerSetup from './src/components/MultiplayerSetup';
 import MultiplayerBoard from './src/components/MultiplayerBoard';
 import MultiplayerRanking from './src/components/MultiplayerRanking';
 import HelpScreen from './src/components/HelpScreen';
+import LoginScreen from './src/components/LoginScreen';
+import { supabase } from './src/services/supabaseClient';
+import { historyService } from './src/services/historyService';
+import { initializePWAMediaSession, cleanupPWAMediaSession } from './src/services/pwaMediaInterceptor';
 import {
   TennisConfig,
   MatchState,
@@ -39,8 +44,77 @@ export default function App() {
   });
 
   const [screen, setScreen] = useState<
-    'home' | 'setup' | 'remote' | 'game' | 'history' | 'multiplayer_setup' | 'multiplayer_game' | 'multiplayer_ranking' | 'help'
+    'home' | 'setup' | 'remote' | 'game' | 'history' | 'multiplayer_setup' | 'multiplayer_game' | 'multiplayer_ranking' | 'help' | 'login'
   >('home');
+  const [session, setSession] = useState<any>(null);
+  const [userApiKey, setUserApiKey] = useState<string | null>(null);
+  const [userTier, setUserTier] = useState<'free' | 'pro'>('free');
+
+  useEffect(() => {
+    const fetchUserData = async (userId: string) => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('api_key, tier')
+        .eq('id', userId)
+        .single();
+      if (data) {
+        setUserApiKey(data.api_key);
+        setUserTier(data.tier as 'free' | 'pro');
+      }
+    };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        historyService.syncLocalHistoryWithCloud();
+        fetchUserData(session.user.id);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) {
+        historyService.syncLocalHistoryWithCloud();
+        fetchUserData(session.user.id);
+      } else {
+        setUserApiKey(null);
+        setUserTier('free');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Ouvinte do canal Supabase Realtime para comandos do Apple Watch
+  useEffect(() => {
+    if (!session?.user?.id || !userApiKey) return;
+
+    const channel = supabase
+      .channel('watch_events_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'watch_events',
+          filter: `api_key=eq.${userApiKey}`,
+        },
+        (payload) => {
+          if (payload.new && typeof payload.new.action === 'string') {
+            console.log('Received watch event command:', payload.new.action);
+            handleRemoteActionRef.current(payload.new.action);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id, userApiKey]);
+
   const [multiplayerState, setMultiplayerState] = useState<MultiplayerSessionState | null>(null);
   const [matchState, setMatchState] = useState<MatchState | null>(null);
   const [language, setLanguage] = useState<'pt' | 'en' | 'es'>('pt');
@@ -64,6 +138,12 @@ export default function App() {
     'gesture_left': 'undo',
     'gesture_right': 'announceScore',
     'key_Tab': 'undo',
+    'key_volume_up': 'addPointLeft',
+    'key_volume_down': 'addPointRight',
+    'key_media_next': 'addPointRight',
+    'key_media_previous': 'undo',
+    'key_media_play': 'undo',
+    'key_media_togglePlayPause': 'undo',
   });
 
   // Load custom physical remote mappings from AsyncStorage on startup
@@ -72,7 +152,11 @@ export default function App() {
       try {
         const saved = await AsyncStorage.getItem('koala_physical_mappings');
         if (saved) {
-          setPhysicalMappings(JSON.parse(saved));
+          const savedObj = JSON.parse(saved);
+          setPhysicalMappings((prev) => ({
+            ...prev,
+            ...savedObj,
+          }));
         }
       } catch (e) {
         console.warn('Failed to load physical mappings', e);
@@ -151,6 +235,47 @@ export default function App() {
 
   const buttonMappingsRef = useRef(buttonMappings);
   buttonMappingsRef.current = buttonMappings;
+
+  const physicalMappingsRef = useRef(physicalMappings);
+  physicalMappingsRef.current = physicalMappings;
+
+  // Initialize and clean up Bluetooth interceptors (volume & media commands)
+  useEffect(() => {
+    const handleInteraction = () => {
+      initializePWAMediaSession();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('click', handleInteraction);
+      window.addEventListener('touchstart', handleInteraction);
+      window.addEventListener('keydown', handleInteraction);
+    } else {
+      initializePWAMediaSession();
+    }
+
+    const sub = DeviceEventEmitter.addListener('BluetoothMediaKey', (key) => {
+      const inputKey = `key_${key}`;
+      const action = physicalMappingsRef.current[inputKey];
+      if (action) {
+        handleRemoteAction(action);
+      }
+    });
+
+    return () => {
+      sub.remove();
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('click', handleInteraction);
+        window.removeEventListener('touchstart', handleInteraction);
+        window.removeEventListener('keydown', handleInteraction);
+      }
+      cleanupPWAMediaSession();
+    };
+  }, []);
 
   // Sync speech service mute status with state
   useEffect(() => {
@@ -359,6 +484,7 @@ export default function App() {
           noAdScoring: parsed.noAdScoring !== undefined ? parsed.noAdScoring : INITIAL_CONFIG.noAdScoring,
           language: language,
           autoSideChange: parsed.autoSideChange !== undefined ? parsed.autoSideChange : INITIAL_CONFIG.autoSideChange,
+          useIntervalTimer: parsed.useIntervalTimer !== undefined ? parsed.useIntervalTimer : INITIAL_CONFIG.useIntervalTimer,
         };
         firstServer = parsed.firstServer || 1;
         if (parsed.speechEnabled !== undefined) {
@@ -404,6 +530,23 @@ export default function App() {
           isVoiceMuted={isVoiceMuted}
           onToggleMute={() => setIsVoiceMuted(!isVoiceMuted)}
           onQuickStart={handleQuickStart}
+          session={session}
+          onLoginPress={() => setScreen('login')}
+          onLogoutPress={async () => {
+            await supabase.auth.signOut();
+          }}
+          userTier={userTier}
+        />
+      )}
+
+      {screen === 'login' && (
+        <LoginScreen
+          onClose={() => setScreen('home')}
+          onLoginSuccess={(session) => {
+            setSession(session);
+            setScreen('home');
+          }}
+          language={language}
         />
       )}
 
@@ -431,6 +574,10 @@ export default function App() {
           onToggleMute={() => setIsVoiceMuted(!isVoiceMuted)}
           physicalMappings={physicalMappings}
           onUpdatePhysicalMapping={updatePhysicalMapping}
+          session={session}
+          userApiKey={userApiKey}
+          userTier={userTier}
+          onNavigateToLogin={() => setScreen('login')}
         />
       )}
 
