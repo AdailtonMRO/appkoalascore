@@ -157,19 +157,25 @@ export const historyService = {
 
   async deleteMatch(id: string): Promise<boolean> {
     try {
-      const current = await this.getMatches();
-      const filtered = current.filter(item => item.id !== id);
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-
-      // Deleta no Supabase se logado
+      // Deleta no Supabase primeiro se logado
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        await supabase
+        const { error } = await supabase
           .from('matches')
           .delete()
           .eq('user_id', session.user.id)
           .eq('sync_id', id);
+
+        if (error) {
+          console.error('Failed to delete match from Supabase:', error);
+          return false;
+        }
       }
+
+      // Se a exclusão na nuvem foi bem sucedida (ou se não logado), remove localmente
+      const current = await this.getMatches();
+      const filtered = current.filter(item => item.id !== id);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 
       return true;
     } catch (error) {

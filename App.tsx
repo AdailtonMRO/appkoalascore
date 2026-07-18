@@ -553,6 +553,10 @@ export default function App() {
       {screen === 'setup' && (
         <MatchSetup
           onStartMatch={handleStartMatch}
+          onStartMultiplayer={(session) => {
+            setMultiplayerState(session);
+            setScreen('multiplayer_game');
+          }}
           onBack={() => setScreen('home')}
           language={language}
           initialConfig={matchState?.config}

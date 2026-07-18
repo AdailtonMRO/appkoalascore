@@ -16,9 +16,10 @@ interface MultiplayerSetupProps {
   onStart: (state: MultiplayerSessionState) => void;
   onBack: () => void;
   language: 'pt' | 'en' | 'es';
+  embedded?: boolean;
 }
 
-export default function MultiplayerSetup({ onStart, onBack, language }: MultiplayerSetupProps) {
+export default function MultiplayerSetup({ onStart, onBack, language, embedded = false }: MultiplayerSetupProps) {
   const [mode, setMode] = useState<'singles' | 'doubles'>('singles');
   const [bestOfGames, setBestOfGames] = useState<3 | 5>(3);
   const [playerInput, setPlayerInput] = useState('');
@@ -131,23 +132,8 @@ export default function MultiplayerSetup({ onStart, onBack, language }: Multipla
 
   const t = localization[language] || localization.pt;
 
-  return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Top navigation Back button */}
-      <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backButton} onPress={onBack}>
-          <Ionicons name="arrow-back" size={24} color="#ccff00" />
-          <Text style={styles.backButtonText}>{t.back}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Header */}
-      <View style={styles.header}>
-        <Ionicons name="people" size={42} color="#10b981" style={styles.peopleIcon} />
-        <Text style={styles.title}>{t.title}</Text>
-        <Text style={styles.subtitle}>{t.subtitle}</Text>
-      </View>
-
+  const content = (
+    <View style={embedded ? { paddingVertical: 10 } : null}>
       {/* Mode Selection Card */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t.modeLabel}</Text>
@@ -258,6 +244,31 @@ export default function MultiplayerSetup({ onStart, onBack, language }: Multipla
         <Text style={styles.startButtonText}>{t.startBtn}</Text>
         <Ionicons name="shuffle" size={24} color="#0f172a" />
       </TouchableOpacity>
+    </View>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Top navigation Back button */}
+      <View style={styles.topBar}>
+        <TouchableOpacity style={styles.backButton} onPress={onBack}>
+          <Ionicons name="arrow-back" size={24} color="#ccff00" />
+          <Text style={styles.backButtonText}>{t.back}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Header */}
+      <View style={styles.header}>
+        <Ionicons name="people" size={42} color="#10b981" style={styles.peopleIcon} />
+        <Text style={styles.title}>{t.title}</Text>
+        <Text style={styles.subtitle}>{t.subtitle}</Text>
+      </View>
+
+      {content}
     </ScrollView>
   );
 }

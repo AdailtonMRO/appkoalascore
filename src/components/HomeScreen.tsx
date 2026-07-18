@@ -350,17 +350,7 @@ export default function HomeScreen({
           <Ionicons name="chevron-forward" size={20} color="#475569" />
         </TouchableOpacity>
 
-        {/* Multiplayer Option */}
-        <TouchableOpacity style={styles.menuItem} onPress={() => onNavigate('multiplayer_setup')}>
-          <View style={[styles.iconWrapper, { backgroundColor: '#10b981' }]}>
-            <Ionicons name="people" size={24} color="#fff" />
-          </View>
-          <View style={styles.menuTextCol}>
-            <Text style={styles.menuItemTitle}>{t.multiplayerBtn}</Text>
-            <Text style={styles.menuItemDesc}>{t.multiplayerDesc}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#475569" />
-        </TouchableOpacity>
+
 
         {/* Match History Option */}
         <TouchableOpacity style={styles.menuItem} onPress={() => onNavigate('history')}>

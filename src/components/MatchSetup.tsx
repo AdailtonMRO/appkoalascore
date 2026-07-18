@@ -13,9 +13,11 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TennisConfig, INITIAL_CONFIG } from '../utils/tennisEngine';
 import { SpeechService } from '../services/speechService';
+import MultiplayerSetup from './MultiplayerSetup';
 
 interface MatchSetupProps {
   onStartMatch: (config: TennisConfig, firstServer: 1 | 2) => void;
+  onStartMultiplayer?: (state: any) => void;
   onBack: () => void;
   language: 'pt' | 'en' | 'es';
   initialConfig?: TennisConfig;
@@ -23,10 +25,12 @@ interface MatchSetupProps {
 
 export default function MatchSetup({
   onStartMatch,
+  onStartMultiplayer,
   onBack,
   language,
   initialConfig = INITIAL_CONFIG,
 }: MatchSetupProps) {
+  const [activeTab, setActiveTab] = useState<'jogo' | 'treino'>('jogo');
   const [player1Name, setPlayer1Name] = useState(initialConfig.player1Name);
   const [player2Name, setPlayer2Name] = useState(initialConfig.player2Name);
   const [setsToWin, setSetsToWin] = useState<number>(initialConfig.setsToWin);
@@ -255,284 +259,323 @@ export default function MatchSetup({
         <Text style={styles.subtitle}>{t.subtitle}</Text>
       </View>
 
-      {/* Players Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t.players}</Text>
-        
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>{t.p1Label}</Text>
-          <View style={styles.textInputWrapper}>
-            <Ionicons name="person" size={20} color="#06b6d4" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              value={player1Name}
-              onChangeText={setPlayer1Name}
-              placeholder={t.p1Placeholder}
-              placeholderTextColor="#64748b"
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>{t.p2Label}</Text>
-          <View style={styles.textInputWrapper}>
-            <Ionicons name="person" size={20} color="#f97316" style={styles.inputIcon} />
-            <TextInput
-              style={styles.textInput}
-              value={player2Name}
-              onChangeText={setPlayer2Name}
-              placeholder={t.p2Placeholder}
-              placeholderTextColor="#64748b"
-            />
-          </View>
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>{t.serverLabel}</Text>
-          <View style={styles.serverRow}>
-            <TouchableOpacity
-              style={[
-                styles.serverButton,
-                firstServer === 1 && styles.serverButtonActiveP1,
-              ]}
-              onPress={() => setFirstServer(1)}
-            >
-              <Ionicons
-                name="tennisball-outline"
-                size={18}
-                color={firstServer === 1 ? '#fff' : '#06b6d4'}
-              />
-              <Text style={[styles.serverButtonText, firstServer === 1 && styles.textWhite]}>
-                {player1Name || (language === 'pt' ? 'Jogador 1' : 'Player 1')}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.serverButton,
-                firstServer === 2 && styles.serverButtonActiveP2,
-              ]}
-              onPress={() => setFirstServer(2)}
-            >
-              <Ionicons
-                name="tennisball-outline"
-                size={18}
-                color={firstServer === 2 ? '#fff' : '#f97316'}
-              />
-              <Text style={[styles.serverButtonText, firstServer === 2 && styles.textWhite]}>
-                {player2Name || (language === 'pt' ? 'Jogador 2' : 'Player 2')}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-
-      {/* Rules Card */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>{t.format}</Text>
-
-        {/* Sets Options */}
-        <Text style={styles.inputLabel}>{t.setsLabel}</Text>
-        <View style={styles.btnGroup}>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, setsToWin === 1 && styles.btnGroupItemActive]}
-            onPress={() => setSetsToWin(1)}
-          >
-            <Text style={[styles.btnGroupText, setsToWin === 1 && styles.textBlack]}>{t.set1}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, setsToWin === 2 && styles.btnGroupItemActive]}
-            onPress={() => setSetsToWin(2)}
-          >
-            <Text style={[styles.btnGroupText, setsToWin === 2 && styles.textBlack]}>{t.set3}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, setsToWin === 3 && styles.btnGroupItemActive]}
-            onPress={() => setSetsToWin(3)}
-          >
-            <Text style={[styles.btnGroupText, setsToWin === 3 && styles.textBlack]}>{t.set5}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Games per set */}
-        <Text style={styles.inputLabel}>{t.gamesLabel}</Text>
-        <View style={styles.btnGroup}>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, gamesPerSet === 4 && styles.btnGroupItemActive]}
-            onPress={() => setGamesPerSet(4)}
-          >
-            <Text style={[styles.btnGroupText, gamesPerSet === 4 && styles.textBlack]}>{t.g4}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, gamesPerSet === 6 && styles.btnGroupItemActive]}
-            onPress={() => setGamesPerSet(6)}
-          >
-            <Text style={[styles.btnGroupText, gamesPerSet === 6 && styles.textBlack]}>{t.g6}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.btnGroupItem, gamesPerSet === 8 && styles.btnGroupItemActive]}
-            onPress={() => setGamesPerSet(8)}
-          >
-            <Text style={[styles.btnGroupText, gamesPerSet === 8 && styles.textBlack]}>{t.g8}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Deuce Option */}
-        <View style={styles.switchRow}>
-          <View style={styles.switchLabelCol}>
-            <Text style={styles.switchLabel}>{t.noAd}</Text>
-            <Text style={styles.switchDesc}>{t.noAdDesc}</Text>
-          </View>
-          <Switch
-            value={noAdScoring}
-            onValueChange={setNoAdScoring}
-            trackColor={{ false: '#334155', true: '#ccff00' }}
-            thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
-          />
-        </View>
-      </View>
-
-      {/* Tie Break Settings Card */}
-      <View style={styles.card}>
+      {/* Tab Selector */}
+      <View style={styles.tabContainer}>
         <TouchableOpacity 
-          style={styles.accordionHeader} 
-          onPress={() => setShowTieBreak(!showTieBreak)}
-          activeOpacity={0.7}
+          style={[
+            styles.tabButton, 
+            activeTab === 'jogo' && styles.tabButtonActiveJogo
+          ]} 
+          onPress={() => setActiveTab('jogo')}
         >
-          <View style={styles.accordionHeaderLeft}>
-            <Ionicons name="git-branch-outline" size={20} color="#ccff00" style={{ marginRight: 10 }} />
-            <Text style={styles.accordionTitle}>{t.tbTitle}</Text>
-          </View>
-          <Ionicons 
-            name={showTieBreak ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color="#ccff00" 
-          />
+          <Ionicons name="tennisball" size={16} color={activeTab === 'jogo' ? '#0f172a' : '#ccff00'} />
+          <Text style={[styles.tabText, activeTab === 'jogo' && styles.tabTextActive]}>
+            {language === 'pt' ? 'Jogo' : language === 'es' ? 'Partido' : 'Game'}
+          </Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[
+            styles.tabButton, 
+            activeTab === 'treino' && styles.tabButtonActiveTreino
+          ]} 
+          onPress={() => setActiveTab('treino')}
+        >
+          <Ionicons name="people" size={16} color={activeTab === 'treino' ? '#0f172a' : '#10b981'} />
+          <Text style={[styles.tabText, activeTab === 'treino' && styles.tabTextActive]}>
+            {language === 'pt' ? 'Treino' : language === 'es' ? 'Entrenamiento' : 'Training'}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-        {showTieBreak && (
-          <View style={styles.accordionContent}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabelCol}>
-                <Text style={styles.switchLabel}>{t.tbEnable}</Text>
-                <Text style={styles.switchDesc}>{t.tbEnableDesc}</Text>
-              </View>
-              <Switch
-                value={useTieBreak}
-                onValueChange={setUseTieBreak}
-                trackColor={{ false: '#334155', true: '#ccff00' }}
-                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
-              />
-            </View>
-
-            {useTieBreak && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>{t.tbPoints}</Text>
-                <View style={styles.btnGroup}>
-                  <TouchableOpacity
-                    style={[styles.btnGroupItem, tieBreakPoints === 7 && styles.btnGroupItemActive]}
-                    onPress={() => setTieBreakPoints(7)}
-                  >
-                    <Text style={[styles.btnGroupText, tieBreakPoints === 7 && styles.textBlack]}>{t.tb7}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.btnGroupItem, tieBreakPoints === 10 && styles.btnGroupItemActive]}
-                    onPress={() => setTieBreakPoints(10)}
-                  >
-                    <Text style={[styles.btnGroupText, tieBreakPoints === 10 && styles.textBlack]}>{t.tb10}</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-
-            {setsToWin > 1 && (
-              <View style={styles.switchRow}>
-                <View style={styles.switchLabelCol}>
-                  <Text style={styles.switchLabel}>{t.superTB}</Text>
-                  <Text style={styles.switchDesc}>{t.superTBDesc}</Text>
-                </View>
-                <Switch
-                  value={useMatchTieBreakForFinalSet}
-                  onValueChange={setUseMatchTieBreakForFinalSet}
-                  trackColor={{ false: '#334155', true: '#ccff00' }}
-                  thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+      {activeTab === 'jogo' ? (
+        <>
+          {/* Players Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t.players}</Text>
+            
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>{t.p1Label}</Text>
+              <View style={styles.textInputWrapper}>
+                <Ionicons name="person" size={20} color="#06b6d4" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={player1Name}
+                  onChangeText={setPlayer1Name}
+                  placeholder={t.p1Placeholder}
+                  placeholderTextColor="#64748b"
                 />
               </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>{t.p2Label}</Text>
+              <View style={styles.textInputWrapper}>
+                <Ionicons name="person" size={20} color="#f97316" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.textInput}
+                  value={player2Name}
+                  onChangeText={setPlayer2Name}
+                  placeholder={t.p2Placeholder}
+                  placeholderTextColor="#64748b"
+                />
+              </View>
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.inputLabel}>{t.serverLabel}</Text>
+              <View style={styles.serverRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.serverButton,
+                    firstServer === 1 && styles.serverButtonActiveP1,
+                  ]}
+                  onPress={() => setFirstServer(1)}
+                >
+                  <Ionicons
+                    name="tennisball-outline"
+                    size={18}
+                    color={firstServer === 1 ? '#fff' : '#06b6d4'}
+                  />
+                  <Text style={[styles.serverButtonText, firstServer === 1 && styles.textWhite]}>
+                    {player1Name || (language === 'pt' ? 'Jogador 1' : 'Player 1')}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.serverButton,
+                    firstServer === 2 && styles.serverButtonActiveP2,
+                  ]}
+                  onPress={() => setFirstServer(2)}
+                >
+                  <Ionicons
+                    name="tennisball-outline"
+                    size={18}
+                    color={firstServer === 2 ? '#fff' : '#f97316'}
+                  />
+                  <Text style={[styles.serverButtonText, firstServer === 2 && styles.textWhite]}>
+                    {player2Name || (language === 'pt' ? 'Jogador 2' : 'Player 2')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          {/* Rules Card */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t.format}</Text>
+
+            {/* Sets Options */}
+            <Text style={styles.inputLabel}>{t.setsLabel}</Text>
+            <View style={styles.btnGroup}>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, setsToWin === 1 && styles.btnGroupItemActive]}
+                onPress={() => setSetsToWin(1)}
+              >
+                <Text style={[styles.btnGroupText, setsToWin === 1 && styles.textBlack]}>{t.set1}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, setsToWin === 2 && styles.btnGroupItemActive]}
+                onPress={() => setSetsToWin(2)}
+              >
+                <Text style={[styles.btnGroupText, setsToWin === 2 && styles.textBlack]}>{t.set3}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, setsToWin === 3 && styles.btnGroupItemActive]}
+                onPress={() => setSetsToWin(3)}
+              >
+                <Text style={[styles.btnGroupText, setsToWin === 3 && styles.textBlack]}>{t.set5}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Games per set */}
+            <Text style={styles.inputLabel}>{t.gamesLabel}</Text>
+            <View style={styles.btnGroup}>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, gamesPerSet === 4 && styles.btnGroupItemActive]}
+                onPress={() => setGamesPerSet(4)}
+              >
+                <Text style={[styles.btnGroupText, gamesPerSet === 4 && styles.textBlack]}>{t.g4}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, gamesPerSet === 6 && styles.btnGroupItemActive]}
+                onPress={() => setGamesPerSet(6)}
+              >
+                <Text style={[styles.btnGroupText, gamesPerSet === 6 && styles.textBlack]}>{t.g6}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.btnGroupItem, gamesPerSet === 8 && styles.btnGroupItemActive]}
+                onPress={() => setGamesPerSet(8)}
+              >
+                <Text style={[styles.btnGroupText, gamesPerSet === 8 && styles.textBlack]}>{t.g8}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Deuce Option */}
+            <View style={styles.switchRow}>
+              <View style={styles.switchLabelCol}>
+                <Text style={styles.switchLabel}>{t.noAd}</Text>
+                <Text style={styles.switchDesc}>{t.noAdDesc}</Text>
+              </View>
+              <Switch
+                value={noAdScoring}
+                onValueChange={setNoAdScoring}
+                trackColor={{ false: '#334155', true: '#ccff00' }}
+                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+              />
+            </View>
+          </View>
+
+          {/* Tie Break Settings Card */}
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.accordionHeader} 
+              onPress={() => setShowTieBreak(!showTieBreak)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <Ionicons name="git-branch-outline" size={20} color="#ccff00" style={{ marginRight: 10 }} />
+                <Text style={styles.accordionTitle}>{t.tbTitle}</Text>
+              </View>
+              <Ionicons 
+                name={showTieBreak ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color="#ccff00" 
+              />
+            </TouchableOpacity>
+
+            {showTieBreak && (
+              <View style={styles.accordionContent}>
+                <View style={styles.switchRow}>
+                  <View style={styles.switchLabelCol}>
+                    <Text style={styles.switchLabel}>{t.tbEnable}</Text>
+                    <Text style={styles.switchDesc}>{t.tbEnableDesc}</Text>
+                  </View>
+                  <Switch
+                    value={useTieBreak}
+                    onValueChange={setUseTieBreak}
+                    trackColor={{ false: '#334155', true: '#ccff00' }}
+                    thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+                  />
+                </View>
+
+                {useTieBreak && (
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>{t.tbPoints}</Text>
+                    <View style={styles.btnGroup}>
+                      <TouchableOpacity
+                        style={[styles.btnGroupItem, tieBreakPoints === 7 && styles.btnGroupItemActive]}
+                        onPress={() => setTieBreakPoints(7)}
+                      >
+                        <Text style={[styles.btnGroupText, tieBreakPoints === 7 && styles.textBlack]}>{t.tb7}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.btnGroupItem, tieBreakPoints === 10 && styles.btnGroupItemActive]}
+                        onPress={() => setTieBreakPoints(10)}
+                      >
+                        <Text style={[styles.btnGroupText, tieBreakPoints === 10 && styles.textBlack]}>{t.tb10}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {setsToWin > 1 && (
+                  <View style={styles.switchRow}>
+                    <View style={styles.switchLabelCol}>
+                      <Text style={styles.switchLabel}>{t.superTB}</Text>
+                      <Text style={styles.switchDesc}>{t.superTBDesc}</Text>
+                    </View>
+                    <Switch
+                      value={useMatchTieBreakForFinalSet}
+                      onValueChange={setUseMatchTieBreakForFinalSet}
+                      trackColor={{ false: '#334155', true: '#ccff00' }}
+                      thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+                    />
+                  </View>
+                )}
+              </View>
             )}
           </View>
-        )}
-      </View>
 
-      {/* Preferences */}
-      <View style={styles.card}>
-        <TouchableOpacity 
-          style={styles.accordionHeader} 
-          onPress={() => setShowPreferences(!showPreferences)}
-          activeOpacity={0.7}
-        >
-          <View style={styles.accordionHeaderLeft}>
-            <Ionicons name="options-outline" size={20} color="#ccff00" style={{ marginRight: 10 }} />
-            <Text style={styles.accordionTitle}>{t.preferences}</Text>
+          {/* Preferences */}
+          <View style={styles.card}>
+            <TouchableOpacity 
+              style={styles.accordionHeader} 
+              onPress={() => setShowPreferences(!showPreferences)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.accordionHeaderLeft}>
+                <Ionicons name="options-outline" size={20} color="#ccff00" style={{ marginRight: 10 }} />
+                <Text style={styles.accordionTitle}>{t.preferences}</Text>
+              </View>
+              <Ionicons 
+                name={showPreferences ? "chevron-up" : "chevron-down"} 
+                size={20} 
+                color="#ccff00" 
+              />
+            </TouchableOpacity>
+
+            {showPreferences && (
+              <View style={styles.accordionContent}>
+                <View style={styles.switchRow}>
+                  <View style={styles.switchLabelCol}>
+                    <Text style={styles.switchLabel}>{t.tts}</Text>
+                    <Text style={styles.switchDesc}>{t.ttsDesc}</Text>
+                  </View>
+                  <Switch
+                    value={speechEnabled}
+                    onValueChange={(val) => {
+                      setSpeechEnabled(val);
+                      SpeechService.setSpeechEnabled(val);
+                    }}
+                    trackColor={{ false: '#334155', true: '#ccff00' }}
+                    thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+                  />
+                </View>
+
+                <View style={styles.switchRow}>
+                  <View style={styles.switchLabelCol}>
+                    <Text style={styles.switchLabel}>{t.autoSide}</Text>
+                    <Text style={styles.switchDesc}>{t.autoSideDesc}</Text>
+                  </View>
+                  <Switch
+                    value={autoSideChange}
+                    onValueChange={setAutoSideChange}
+                    trackColor={{ false: '#334155', true: '#ccff00' }}
+                    thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+                  />
+                </View>
+
+                <View style={styles.switchRow}>
+                  <View style={styles.switchLabelCol}>
+                    <Text style={styles.switchLabel}>{t.useIntervalTimer}</Text>
+                    <Text style={styles.switchDesc}>{t.useIntervalTimerDesc}</Text>
+                  </View>
+                  <Switch
+                    value={useIntervalTimer}
+                    onValueChange={setUseIntervalTimer}
+                    trackColor={{ false: '#334155', true: '#ccff00' }}
+                    thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
+                  />
+                </View>
+              </View>
+            )}
           </View>
-          <Ionicons 
-            name={showPreferences ? "chevron-up" : "chevron-down"} 
-            size={20} 
-            color="#ccff00" 
-          />
-        </TouchableOpacity>
 
-        {showPreferences && (
-          <View style={styles.accordionContent}>
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabelCol}>
-                <Text style={styles.switchLabel}>{t.tts}</Text>
-                <Text style={styles.switchDesc}>{t.ttsDesc}</Text>
-              </View>
-              <Switch
-                value={speechEnabled}
-                onValueChange={(val) => {
-                  setSpeechEnabled(val);
-                  SpeechService.setSpeechEnabled(val);
-                }}
-                trackColor={{ false: '#334155', true: '#ccff00' }}
-                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabelCol}>
-                <Text style={styles.switchLabel}>{t.autoSide}</Text>
-                <Text style={styles.switchDesc}>{t.autoSideDesc}</Text>
-              </View>
-              <Switch
-                value={autoSideChange}
-                onValueChange={setAutoSideChange}
-                trackColor={{ false: '#334155', true: '#ccff00' }}
-                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
-              />
-            </View>
-
-            <View style={styles.switchRow}>
-              <View style={styles.switchLabelCol}>
-                <Text style={styles.switchLabel}>{t.useIntervalTimer}</Text>
-                <Text style={styles.switchDesc}>{t.useIntervalTimerDesc}</Text>
-              </View>
-              <Switch
-                value={useIntervalTimer}
-                onValueChange={setUseIntervalTimer}
-                trackColor={{ false: '#334155', true: '#ccff00' }}
-                thumbColor={Platform.OS === 'ios' ? undefined : '#f8fafc'}
-              />
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* Start Button */}
-      <TouchableOpacity style={styles.startButton} onPress={handleStart}>
-        <Text style={styles.startButtonText}>{t.start}</Text>
-        <Ionicons name="play-forward" size={24} color="#0f172a" />
-      </TouchableOpacity>
+          {/* Start Button */}
+          <TouchableOpacity style={styles.startButton} onPress={handleStart}>
+            <Text style={styles.startButtonText}>{t.start}</Text>
+            <Ionicons name="play-forward" size={24} color="#0f172a" />
+          </TouchableOpacity>
+        </>
+      ) : (
+        <MultiplayerSetup
+          embedded
+          language={language}
+          onStart={onStartMultiplayer || (() => {})}
+          onBack={onBack}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -756,5 +799,37 @@ const styles = StyleSheet.create({
   },
   halfInputContainer: {
     flex: 1,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 4,
+    marginBottom: 20,
+  },
+  tabButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    gap: 8,
+  },
+  tabButtonActiveJogo: {
+    backgroundColor: '#ccff00',
+  },
+  tabButtonActiveTreino: {
+    backgroundColor: '#10b981',
+  },
+  tabText: {
+    color: '#94a3b8',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  tabTextActive: {
+    color: '#0f172a',
   },
 });
