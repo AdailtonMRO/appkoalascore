@@ -61,7 +61,7 @@ export default function App() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setUserApiKey(data.api_key);
-          setUserTier(data.tier as 'free' | 'pro');
+          setUserTier('pro');
         }
       } catch (err) {
         console.warn('Error fetching user profile from Firestore:', err);
@@ -77,6 +77,7 @@ export default function App() {
           },
         };
         setSession(currentSession);
+        setUserTier('pro');
         historyService.syncLocalHistoryWithCloud();
         fetchUserData(user.uid);
       } else {

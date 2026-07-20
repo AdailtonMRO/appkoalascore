@@ -370,44 +370,6 @@ export default function HomeScreen({
           <Ionicons name="chevron-forward" size={20} color="#475569" />
         </TouchableOpacity>
 
-        {/* Multiplayer / Rotation Queue Option */}
-        <TouchableOpacity 
-          style={styles.menuItem} 
-          onPress={() => {
-            if (userTier === 'pro') {
-              onNavigate('multiplayer_setup');
-            } else {
-              Alert.alert(
-                language === 'pt' ? 'Recurso Premium (PRO)' : 'Premium Feature (PRO)',
-                language === 'pt' 
-                  ? 'A funcionalidade de Multiplayer com fila de rotação e ranking é exclusiva para usuários PRO. Deseja conhecer os planos?'
-                  : 'Multiplayer mode with rotation queue and rankings is exclusive for PRO users. Would you like to check our plans?',
-                [
-                  { text: language === 'pt' ? 'Agora Não' : 'Not Now', style: 'cancel' },
-                  { text: language === 'pt' ? 'Ver Planos' : 'View Plans', onPress: () => onNavigate('upgrade') }
-                ]
-              );
-            }
-          }}
-        >
-          <View style={[styles.iconWrapper, { backgroundColor: '#ec4899' }]}>
-            <Ionicons name="people" size={24} color="#fff" />
-            {userTier !== 'pro' && (
-              <View style={styles.lockBadge}>
-                <Ionicons name="lock-closed" size={10} color="#fff" />
-              </View>
-            )}
-          </View>
-          <View style={styles.menuTextCol}>
-            <Text style={styles.menuItemTitle}>
-              {t.multiplayerBtn} {userTier !== 'pro' && '🔒'}
-            </Text>
-            <Text style={styles.menuItemDesc}>{t.multiplayerDesc}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#475569" />
-        </TouchableOpacity>
-
-
 
         {/* Match History Option */}
         <TouchableOpacity style={styles.menuItem} onPress={() => onNavigate('history')}>
