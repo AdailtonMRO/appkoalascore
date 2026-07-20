@@ -485,24 +485,24 @@ export default function HomeScreen({
       </View>
 
       {/* Advertising / Sponsors Area */}
-      {userTier === 'free' && (
-        <View style={styles.adAreaContainer}>
-          <Text style={styles.adAreaLabel}>{t.adAreaLabel}</Text>
-          
-          {/* Course Promo Banner */}
-          <TouchableOpacity style={styles.promoBanner} onPress={handlePressBanner}>
-            <View style={styles.promoIconWrapper}>
-              <Ionicons name="build" size={20} color="#ccff00" />
-            </View>
-            <View style={styles.promoTextCol}>
-              <Text style={styles.promoTitle}>{t.promoTitle}</Text>
-              <Text style={styles.promoDesc}>{t.promoDesc}</Text>
-            </View>
-            <Ionicons name="open-outline" size={16} color="#ccff00" />
-          </TouchableOpacity>
+      <View style={styles.adAreaContainer}>
+        <Text style={styles.adAreaLabel}>{t.adAreaLabel}</Text>
+        
+        {/* Course Promo Banner */}
+        <TouchableOpacity style={styles.promoBanner} onPress={handlePressBanner}>
+          <View style={styles.promoIconWrapper}>
+            <Ionicons name="build" size={20} color="#ccff00" />
+          </View>
+          <View style={styles.promoTextCol}>
+            <Text style={styles.promoTitle}>{t.promoTitle}</Text>
+            <Text style={styles.promoDesc}>{t.promoDesc}</Text>
+          </View>
+          <Ionicons name="open-outline" size={16} color="#ccff00" />
+        </TouchableOpacity>
 
-          {/* Ad Space: AdSense on Web, AdMob on Mobile */}
-          {Platform.OS === 'web' ? (
+        {/* Ad Space: AdSense on Web, AdMob on Mobile (Only for free tier) */}
+        {userTier === 'free' && (
+          Platform.OS === 'web' ? (
             <WebAdSense adClient="ca-pub-9278504866264813" adSlot="1616262169" />
           ) : (
             <>
@@ -557,9 +557,9 @@ export default function HomeScreen({
                 </View>
               )}
             </>
-          )}
-        </View>
-      )}
+          )
+        )}
+      </View>
 
       {/* Bluetooth Connection Status Footer */}
       <View style={styles.statusFooter}>
