@@ -13,7 +13,15 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase } from '../services/supabaseClient';
+import { auth } from '../services/firebaseConfig';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithPopup,
+} from 'firebase/auth';
 
 interface LoginScreenProps {
   onClose: () => void;
@@ -44,6 +52,9 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       passRequired: 'Preencha a senha.',
       resetSent: 'Instruções de recuperação enviadas para o seu e-mail.',
       registerSuccess: 'Conta criada com sucesso! Verifique seu e-mail para confirmação se necessário.',
+      orEnterWith: 'Ou continue com',
+      google: 'Google',
+      apple: 'Apple',
     },
     en: {
       login: 'Sign In',
@@ -61,6 +72,9 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       passRequired: 'Please enter your password.',
       resetSent: 'Recovery instructions sent to your email.',
       registerSuccess: 'Account created successfully! Check your email for verification if needed.',
+      orEnterWith: 'Or continue with',
+      google: 'Google',
+      apple: 'Apple',
     },
     es: {
       login: 'Iniciar Sesión',
@@ -70,7 +84,7 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       back: 'Volver',
       forgot: '¿Olvidaste tu contraseña?',
       createAccount: '¿No tienes una cuenta? Regístrate',
-      haveAccount: '¿Ya tienes una cuenta? Inicia sesión',
+      haveAccount: '¿Ya tienes una conta? Inicia sesión',
       sendReset: 'Enviar Correo de Recuperación',
       error: 'Error',
       success: 'Éxito',
@@ -78,8 +92,81 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       passRequired: 'Por favor ingrese su contraseña.',
       resetSent: 'Instrucciones de recuperación enviadas a su correo.',
       registerSuccess: '¡Cuenta creada con éxito! Revise su correo para confirmar si es necesario.',
+      orEnterWith: 'O continuar con',
+      google: 'Google',
+      apple: 'Apple',
     },
   }[language || 'pt'];
+
+  const handleGoogleLogin = async () => {
+    console.log('Google login button clicked.');
+    setLoading(true);
+    try {
+      if (Platform.OS === 'web') {
+        console.log('Running on web. Initializing GoogleAuthProvider...');
+        const provider = new GoogleAuthProvider();
+        console.log('Calling signInWithPopup with:', { auth, provider });
+        const userCredential = await signInWithPopup(auth, provider);
+        console.log('signInWithPopup resolved:', userCredential);
+        if (userCredential.user) {
+          onLoginSuccess({
+            user: {
+              id: userCredential.user.uid,
+              email: userCredential.user.email,
+            },
+          });
+        }
+      } else {
+        console.log('Running on mobile. Native sign-in required.');
+        Alert.alert(
+          texts.error,
+          language === 'pt'
+            ? 'Login social no celular requer configuração nativa de app store.'
+            : 'Social login on mobile requires native app store configuration.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Error during Google login:', error);
+      Alert.alert(texts.error, error.message || 'Erro no login com Google.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleLogin = async () => {
+    console.log('Apple login button clicked.');
+    setLoading(true);
+    try {
+      if (Platform.OS === 'web') {
+        console.log('Running on web. Initializing Apple OAuthProvider...');
+        const provider = new OAuthProvider('apple.com');
+        console.log('Calling signInWithPopup...');
+        const userCredential = await signInWithPopup(auth, provider);
+        console.log('signInWithPopup resolved:', userCredential);
+        if (userCredential.user) {
+          onLoginSuccess({
+            user: {
+              id: userCredential.user.uid,
+              email: userCredential.user.email,
+            },
+          });
+        }
+      } else {
+        console.log('Running on mobile. Native sign-in required.');
+        Alert.alert(
+          texts.error,
+          language === 'pt'
+            ? 'Login social no celular requer configuração nativa de app store.'
+            : 'Social login on mobile requires native app store configuration.'
+        );
+      }
+    } catch (error: any) {
+      console.error('Error during Apple login:', error);
+      Alert.alert(texts.error, error.message || 'Erro no login com Apple.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAuth = async () => {
     if (!email) {
@@ -97,14 +184,15 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
           return;
         }
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-        if (error) throw error;
-        if (data.session) {
-          onLoginSuccess(data.session);
+        if (userCredential.user) {
+          onLoginSuccess({
+            user: {
+              id: userCredential.user.uid,
+              email: userCredential.user.email,
+            },
+          });
         }
       } else if (mode === 'register') {
         if (!password) {
@@ -113,20 +201,17 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
           return;
         }
 
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        await createUserWithEmailAndPassword(auth, email, password);
+        
+        // Desloga o usuário recém-criado para seguir o fluxo padrão de login manual
+        if (auth.currentUser) {
+          await auth.signOut();
+        }
 
-        if (error) throw error;
         Alert.alert(texts.success, texts.registerSuccess);
         setMode('login');
       } else if (mode === 'forgot') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: Platform.OS === 'web' ? window.location.origin : undefined,
-        });
-
-        if (error) throw error;
+        await sendPasswordResetEmail(auth, email);
         Alert.alert(texts.success, texts.resetSent);
         setMode('login');
       }
@@ -206,6 +291,29 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Login Social */}
+            {mode === 'login' && (
+              <>
+                <View style={styles.dividerContainer}>
+                  <View style={styles.dividerLine} />
+                  <Text style={styles.dividerText}>{texts.orEnterWith}</Text>
+                  <View style={styles.dividerLine} />
+                </View>
+
+                <View style={styles.socialButtonsContainer}>
+                  <TouchableOpacity style={styles.socialButton} onPress={handleGoogleLogin}>
+                    <Ionicons name="logo-google" size={20} color="#f8fafc" style={{ marginRight: 8 }} />
+                    <Text style={styles.socialButtonText}>{texts.google}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={styles.socialButton} onPress={handleAppleLogin}>
+                    <Ionicons name="logo-apple" size={20} color="#f8fafc" style={{ marginRight: 8 }} />
+                    <Text style={styles.socialButtonText}>{texts.apple}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
 
             {/* Alternar Modos */}
             <View style={styles.switchContainer}>
@@ -321,5 +429,43 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 14,
     fontWeight: '500',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  dividerText: {
+    color: '#64748b',
+    paddingHorizontal: 10,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  socialButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    height: 48,
+    borderRadius: 12,
+  },
+  socialButtonText: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

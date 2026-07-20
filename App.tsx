@@ -16,7 +16,10 @@ import MultiplayerBoard from './src/components/MultiplayerBoard';
 import MultiplayerRanking from './src/components/MultiplayerRanking';
 import HelpScreen from './src/components/HelpScreen';
 import LoginScreen from './src/components/LoginScreen';
-import { supabase } from './src/services/supabaseClient';
+import UpgradeScreen from './src/components/UpgradeScreen';
+import { auth, db } from './src/services/firebaseConfig';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { doc, getDoc, onSnapshot, query, collection, where } from 'firebase/firestore';
 import { historyService } from './src/services/historyService';
 import { initializePWAMediaSession, cleanupPWAMediaSession } from './src/services/pwaMediaInterceptor';
 import {
@@ -44,7 +47,7 @@ export default function App() {
   });
 
   const [screen, setScreen] = useState<
-    'home' | 'setup' | 'remote' | 'game' | 'history' | 'multiplayer_setup' | 'multiplayer_game' | 'multiplayer_ranking' | 'help' | 'login'
+    'home' | 'setup' | 'remote' | 'game' | 'history' | 'multiplayer_setup' | 'multiplayer_game' | 'multiplayer_ranking' | 'help' | 'login' | 'upgrade'
   >('home');
   const [session, setSession] = useState<any>(null);
   const [userApiKey, setUserApiKey] = useState<string | null>(null);
@@ -52,66 +55,71 @@ export default function App() {
 
   useEffect(() => {
     const fetchUserData = async (userId: string) => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('api_key, tier')
-        .eq('id', userId)
-        .single();
-      if (data) {
-        setUserApiKey(data.api_key);
-        setUserTier(data.tier as 'free' | 'pro');
+      try {
+        const docRef = doc(db, 'profiles', userId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUserApiKey(data.api_key);
+          setUserTier(data.tier as 'free' | 'pro');
+        }
+      } catch (err) {
+        console.warn('Error fetching user profile from Firestore:', err);
       }
     };
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const currentSession = {
+          user: {
+            id: user.uid,
+            email: user.email,
+          },
+        };
+        setSession(currentSession);
         historyService.syncLocalHistoryWithCloud();
-        fetchUserData(session.user.id);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) {
-        historyService.syncLocalHistoryWithCloud();
-        fetchUserData(session.user.id);
+        fetchUserData(user.uid);
       } else {
+        setSession(null);
         setUserApiKey(null);
         setUserTier('free');
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
-  // Ouvinte do canal Supabase Realtime para comandos do Apple Watch
+  // Ouvinte do Firestore para comandos do Apple Watch
   useEffect(() => {
     if (!session?.user?.id || !userApiKey) return;
 
-    const channel = supabase
-      .channel('watch_events_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'watch_events',
-          filter: `api_key=eq.${userApiKey}`,
-        },
-        (payload) => {
-          if (payload.new && typeof payload.new.action === 'string') {
-            console.log('Received watch event command:', payload.new.action);
-            handleRemoteActionRef.current(payload.new.action);
+    const startTime = Date.now();
+
+    const q = query(
+      collection(db, 'watch_events'),
+      where('api_key', '==', userApiKey)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          const eventTime = data.created_at?.seconds 
+            ? data.created_at.seconds * 1000 
+            : data.created_at 
+              ? new Date(data.created_at).getTime() 
+              : Date.now();
+
+          if (eventTime >= startTime && typeof data.action === 'string') {
+            console.log('Received watch event command:', data.action);
+            handleRemoteActionRef.current(data.action);
           }
         }
-      )
-      .subscribe();
+      });
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      unsubscribe();
     };
   }, [session?.user?.id, userApiKey]);
 
@@ -512,7 +520,7 @@ export default function App() {
     }
   };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && Platform.OS !== 'web') {
     return null;
   }
 
@@ -533,7 +541,7 @@ export default function App() {
           session={session}
           onLoginPress={() => setScreen('login')}
           onLogoutPress={async () => {
-            await supabase.auth.signOut();
+            await signOut(auth);
           }}
           userTier={userTier}
         />
@@ -650,6 +658,16 @@ export default function App() {
             setScreen('home');
           }}
           language={language}
+        />
+      )}
+
+      {screen === 'upgrade' && (
+        <UpgradeScreen
+          onClose={() => setScreen('home')}
+          language={language}
+          onUpgradeSuccess={() => {
+            setUserTier('pro');
+          }}
         />
       )}
     </SafeAreaView>

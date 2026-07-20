@@ -44,25 +44,39 @@ export default function HistoryScreen({ onBack, language, onResumeMatch }: Histo
   };
 
   const handleDelete = (id: string) => {
-    Alert.alert(
-      t.deleteTitle,
-      t.deleteConfirmMsg,
-      [
-        { text: t.cancel, style: 'cancel' },
-        {
-          text: t.delete,
-          style: 'destructive',
-          onPress: async () => {
-            const success = await historyService.deleteMatch(id);
-            if (success) {
-              loadHistory();
-            } else {
-              Alert.alert(t.errorTitle, t.deleteErrorMsg);
-            }
+    if (Platform.OS === 'web') {
+      const confirmDelete = window.confirm(t.deleteConfirmMsg);
+      if (confirmDelete) {
+        (async () => {
+          const success = await historyService.deleteMatch(id);
+          if (success) {
+            loadHistory();
+          } else {
+            window.alert(t.deleteErrorMsg);
+          }
+        })();
+      }
+    } else {
+      Alert.alert(
+        t.deleteTitle,
+        t.deleteConfirmMsg,
+        [
+          { text: t.cancel, style: 'cancel' },
+          {
+            text: t.delete,
+            style: 'destructive',
+            onPress: async () => {
+              const success = await historyService.deleteMatch(id);
+              if (success) {
+                loadHistory();
+              } else {
+                Alert.alert(t.errorTitle, t.deleteErrorMsg);
+              }
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const startEdit = (item: HistoryItem) => {

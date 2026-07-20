@@ -1046,21 +1046,30 @@ export default function ScoreboardView({
                    rawState: matchState,
                  };
                  const success = await historyService.saveMatch(matchData);
-                if (success) {
-                  if (matchState.resumedMatchId) {
-                    await historyService.deleteMatch(matchState.resumedMatchId);
-                  }
-                  setIsSaved(true);
-                  const successMsg = config.language === 'pt' ? 'Partida salva com sucesso!' : config.language === 'en' ? 'Match saved successfully!' : '¡Partido guardado con éxito!';
-                  if (Platform.OS === 'web') {
-                    window.alert(successMsg);
+                  if (success) {
+                    if (matchState.resumedMatchId) {
+                      await historyService.deleteMatch(matchState.resumedMatchId);
+                    }
+                    setIsSaved(true);
+                    const successMsg = config.language === 'pt' ? 'Partida salva com sucesso!' : config.language === 'en' ? 'Match saved successfully!' : '¡Partido guardado com êxito!';
+                    if (Platform.OS === 'web') {
+                      window.alert(successMsg);
+                    } else {
+                      Alert.alert(
+                        config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
+                        successMsg
+                      );
+                    }
                   } else {
-                    Alert.alert(
-                      config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
-                      successMsg
-                    );
+                    const failMsg = config.language === 'pt' 
+                      ? 'Erro ao salvar partida no Firebase. Verifique suas regras do Firestore.' 
+                      : 'Error saving match to Firebase. Check your Firestore rules.';
+                    if (Platform.OS === 'web') {
+                      window.alert(failMsg);
+                    } else {
+                      Alert.alert('Error', failMsg);
+                    }
                   }
-                }
               }}
               disabled={isSaved}
             >

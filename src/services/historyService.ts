@@ -1,6 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PointHistoryEntry, MatchStats, MatchState } from '../utils/tennisEngine';
-import { supabase } from './supabaseClient';
+import { auth, db } from './firebaseConfig';
+import {
+  doc,
+  getDoc,
+  collection,
+  query,
+  where,
+  getDocs,
+  setDoc,
+  deleteDoc,
+  updateDoc,
+  writeBatch,
+} from 'firebase/firestore';
 
 export interface SavedMatch {
   id: string;
@@ -50,17 +62,14 @@ const STORAGE_KEY = '@koala_score_matches';
 export const historyService = {
   async getUserTier(): Promise<'free' | 'pro'> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return 'free';
+      const user = auth.currentUser;
+      if (!user) return 'free';
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('tier')
-        .eq('id', session.user.id)
-        .single();
+      const docRef = doc(db, 'profiles', user.uid);
+      const docSnap = await getDoc(docRef);
 
-      if (!error && data) {
-        return data.tier as 'free' | 'pro';
+      if (docSnap.exists() && docSnap.data().tier) {
+        return docSnap.data().tier as 'free' | 'pro';
       }
       return 'free';
     } catch {
@@ -78,30 +87,30 @@ export const historyService = {
 
       const tier = await this.getUserTier();
 
-      // Se o usuário estiver autenticado, tenta sincronizar e buscar do Supabase
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      const user = auth.currentUser;
+      if (user) {
         try {
-          const { data: cloudData, error } = await supabase
-            .from('matches')
-            .select('*')
-            .eq('user_id', session.user.id);
+          const q = query(collection(db, 'matches'), where('user_id', '==', user.uid));
+          const querySnapshot = await getDocs(q);
 
-          if (!error && cloudData) {
-            // Mapeia partidas da nuvem de volta para o formato HistoryItem
-            const cloudMatches: HistoryItem[] = cloudData.map(m => m.payload as HistoryItem);
+          const cloudMatches: HistoryItem[] = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.payload) {
+              cloudMatches.push(data.payload as HistoryItem);
+            }
+          });
 
-            // Mesclar local com nuvem (dando preferência para a nuvem em caso de colisão de ID)
-            const mergedMap = new Map<string, HistoryItem>();
-            localMatches.forEach(item => mergedMap.set(item.id, item));
-            cloudMatches.forEach(item => mergedMap.set(item.id, item));
+          // Mesclar local com nuvem (dando preferência para a nuvem em caso de colisão de ID)
+          const mergedMap = new Map<string, HistoryItem>();
+          localMatches.forEach((item) => mergedMap.set(item.id, item));
+          cloudMatches.forEach((item) => mergedMap.set(item.id, item));
 
-            const merged = Array.from(mergedMap.values());
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
-            
-            const sortedMerged = merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-            return tier === 'pro' ? sortedMerged : sortedMerged.slice(0, 5);
-          }
+          const merged = Array.from(mergedMap.values());
+          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+
+          const sortedMerged = merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          return tier === 'pro' ? sortedMerged : sortedMerged.slice(0, 5);
         } catch (cloudError) {
           console.warn('Erro ao buscar partidas da nuvem, retornando locais:', cloudError);
         }
@@ -128,58 +137,64 @@ export const historyService = {
       const updated = [newItem, ...current];
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
-      // Salva no Supabase se logado
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const opponent = newItem.type === 'classic' 
-          ? `${newItem.player1Name} vs ${newItem.player2Name}` 
-          : newItem.winnerName;
+      // Salva no Firestore se logado
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const opponent = newItem.type === 'classic'
+            ? `${newItem.player1Name} vs ${newItem.player2Name}`
+            : newItem.winnerName;
 
-        const winner = newItem.type === 'classic'
-          ? (newItem.winner === 1 ? newItem.player1Name : newItem.player2Name)
-          : newItem.winnerName;
+          const winner = newItem.type === 'classic'
+            ? (newItem.winner === 1 ? newItem.player1Name : newItem.player2Name)
+            : newItem.winnerName;
 
-        await supabase.from('matches').insert({
-          user_id: session.user.id,
-          sync_id: newItem.id,
-          opponent: opponent,
-          winner: winner,
-          payload: newItem
-        });
+          const docRef = doc(db, 'matches', newItem.id);
+          await setDoc(docRef, {
+            user_id: user.uid,
+            sync_id: newItem.id,
+            opponent: opponent,
+            winner: winner,
+            payload: newItem,
+          });
+          console.log('Match synced to Firebase Firestore successfully.');
+        } catch (firebaseError) {
+          console.warn(
+            'Failed to write match to Firebase. Match is saved locally and will sync later:',
+            firebaseError
+          );
+        }
       }
 
       return true;
     } catch (error) {
-      console.warn('Failed to save match:', error);
+      console.warn('Failed to save match locally:', error);
       return false;
     }
   },
 
   async deleteMatch(id: string): Promise<boolean> {
     try {
-      // Deleta no Supabase primeiro se logado
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { error } = await supabase
-          .from('matches')
-          .delete()
-          .eq('user_id', session.user.id)
-          .eq('sync_id', id);
-
-        if (error) {
-          console.error('Failed to delete match from Supabase:', error);
-          return false;
+      // Deleta no Firestore primeiro se logado
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const docRef = doc(db, 'matches', id);
+          await deleteDoc(docRef);
+          console.log('Match deleted from Firebase Firestore.');
+        } catch (firebaseError) {
+          console.warn('Failed to delete match from Firebase (will proceed with local deletion):', firebaseError);
         }
       }
 
-      // Se a exclusão na nuvem foi bem sucedida (ou se não logado), remove localmente
+      // Remove localmente
       const current = await this.getMatches();
-      const filtered = current.filter(item => item.id !== id);
+      const filtered = current.filter((item) => item.id !== id);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
 
       return true;
     } catch (error) {
-      console.warn('Failed to delete match:', error);
+      console.warn('Failed to delete match locally:', error);
       return false;
     }
   },
@@ -187,7 +202,7 @@ export const historyService = {
   async updateMatch(id: string, updatedFields: Partial<HistoryItem>): Promise<boolean> {
     try {
       const current = await this.getMatches();
-      const updated = current.map(item => {
+      const updated = current.map((item) => {
         if (item.id === id) {
           return {
             ...item,
@@ -198,28 +213,30 @@ export const historyService = {
       });
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
-      // Atualiza no Supabase se logado
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const updatedItem = updated.find(item => item.id === id);
-        if (updatedItem) {
-          const opponent = updatedItem.type === 'classic' 
-            ? `${updatedItem.player1Name} vs ${updatedItem.player2Name}` 
-            : updatedItem.winnerName;
+      // Atualiza no Firestore se logado
+      const user = auth.currentUser;
+      if (user) {
+        try {
+          const updatedItem = updated.find((item) => item.id === id);
+          if (updatedItem) {
+            const opponent = updatedItem.type === 'classic'
+              ? `${updatedItem.player1Name} vs ${updatedItem.player2Name}`
+              : updatedItem.winnerName;
 
-          const winner = updatedItem.type === 'classic'
-            ? (updatedItem.winner === 1 ? updatedItem.player1Name : updatedItem.player2Name)
-            : updatedItem.winnerName;
+            const winner = updatedItem.type === 'classic'
+              ? (updatedItem.winner === 1 ? updatedItem.player1Name : updatedItem.player2Name)
+              : updatedItem.winnerName;
 
-          await supabase
-            .from('matches')
-            .update({
+            const docRef = doc(db, 'matches', id);
+            await updateDoc(docRef, {
               opponent: opponent,
               winner: winner,
-              payload: updatedItem
-            })
-            .eq('user_id', session.user.id)
-            .eq('sync_id', id);
+              payload: updatedItem,
+            });
+            console.log('Match updated in Firebase Firestore successfully.');
+          }
+        } catch (firebaseError) {
+          console.warn('Failed to update match in Firebase (will proceed with local update):', firebaseError);
         }
       }
 
@@ -233,50 +250,52 @@ export const historyService = {
   // Sincroniza partidas locais offline que foram criadas antes do login
   async syncLocalHistoryWithCloud(): Promise<void> {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) return;
+      const user = auth.currentUser;
+      if (!user) return;
 
       const localData = await AsyncStorage.getItem(STORAGE_KEY);
       if (!localData) return;
 
       const localMatches = JSON.parse(localData) as HistoryItem[];
 
-      // Busca chaves já sincronizadas no Supabase
-      const { data: cloudData } = await supabase
-        .from('matches')
-        .select('sync_id')
-        .eq('user_id', session.user.id);
-
-      const syncedIds = new Set(cloudData?.map(m => m.sync_id) || []);
+      // Busca chaves já sincronizadas no Firestore
+      const q = query(collection(db, 'matches'), where('user_id', '==', user.uid));
+      const querySnapshot = await getDocs(q);
+      const syncedIds = new Set<string>();
+      querySnapshot.forEach((doc) => {
+        syncedIds.add(doc.id);
+      });
 
       // Filtra as locais que ainda não estão na nuvem
-      const unsyncedMatches = localMatches.filter(item => !syncedIds.has(item.id));
+      const unsyncedMatches = localMatches.filter((item) => !syncedIds.has(item.id));
 
       if (unsyncedMatches.length === 0) return;
 
-      // Faz o upload em lote (bulk insert)
-      const insertData = unsyncedMatches.map(item => {
-        const opponent = item.type === 'classic' 
-          ? `${item.player1Name} vs ${item.player2Name}` 
+      // Faz o upload em lote (batch write)
+      const batch = writeBatch(db);
+      unsyncedMatches.forEach((item) => {
+        const opponent = item.type === 'classic'
+          ? `${item.player1Name} vs ${item.player2Name}`
           : item.winnerName;
 
         const winner = item.type === 'classic'
           ? (item.winner === 1 ? item.player1Name : item.player2Name)
           : item.winnerName;
 
-        return {
-          user_id: session.user.id,
+        const docRef = doc(db, 'matches', item.id);
+        batch.set(docRef, {
+          user_id: user.uid,
           sync_id: item.id,
           opponent: opponent,
           winner: winner,
-          payload: item
-        };
+          payload: item,
+        });
       });
 
-      await supabase.from('matches').insert(insertData);
-      console.log(`${insertData.length} partidas sincronizadas com a nuvem com sucesso!`);
+      await batch.commit();
+      console.log(`${unsyncedMatches.length} partidas sincronizadas com a nuvem com sucesso!`);
     } catch (e) {
       console.warn('Erro ao sincronizar histórico offline com a nuvem:', e);
     }
-  }
+  },
 };

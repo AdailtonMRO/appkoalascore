@@ -553,7 +553,18 @@ export default function BluetoothConnector({
               <TouchableOpacity
                 key={btnId}
                 style={styles.configRow}
-                onPress={() => setEditingBtnId(btnId)}
+                onPress={() => {
+                  if (userTier === 'pro') {
+                    setEditingBtnId(btnId);
+                  } else {
+                    Alert.alert(
+                      language === 'pt' ? 'Mapeamento Customizado (PRO)' : 'Custom Mapping (PRO)',
+                      language === 'pt' 
+                        ? 'O mapeamento customizado de botões e teclas de atalho é exclusivo para usuários PRO.'
+                        : 'Custom remote key/button mapping is exclusive to PRO users.'
+                    );
+                  }
+                }}
               >
                 <View style={styles.btnBadge}>
                   <Text style={styles.btnBadgeText}>{btnId}</Text>
@@ -589,7 +600,18 @@ export default function BluetoothConnector({
               <TouchableOpacity
                 key={act.id}
                 style={styles.configRow}
-                onPress={() => setRecordingAction(act.id)}
+                onPress={() => {
+                  if (userTier === 'pro') {
+                    setRecordingAction(act.id);
+                  } else {
+                    Alert.alert(
+                      language === 'pt' ? 'Mapeamento Customizado (PRO)' : 'Custom Mapping (PRO)',
+                      language === 'pt' 
+                        ? 'O mapeamento de atalhos e botões físicos é exclusivo para usuários PRO.'
+                        : 'Custom remote key/button mapping is exclusive to PRO users.'
+                    );
+                  }
+                }}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.btnActionText}>{label}</Text>
@@ -640,6 +662,20 @@ export default function BluetoothConnector({
                 {language === 'pt' ? 'Fazer Login / Cadastro' : 'Log In / Sign Up'}
               </Text>
             </TouchableOpacity>
+          </View>
+        ) : userTier !== 'pro' ? (
+          <View style={{ marginTop: 12 }}>
+            <Text style={styles.diagDesc}>
+              {language === 'pt' 
+                ? 'O controle remoto por Apple Watch é um recurso PRO. Adquira a licença vitalícia (com 7 dias de teste grátis) para liberar sua Chave de API Secreta!'
+                : 'Apple Watch remote control is a PRO feature. Get the lifetime license (with 7-day free trial) to unlock your Secret API Key!'}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 8 }}>
+              <Ionicons name="lock-closed" size={18} color="#ef4444" />
+              <Text style={{ color: '#ef4444', fontWeight: 'bold', fontSize: 14 }}>
+                {language === 'pt' ? 'Recurso Premium (PRO) Bloqueado' : 'Premium Feature (PRO) Locked'}
+              </Text>
+            </View>
           </View>
         ) : (
           <View style={{ marginTop: 12 }}>

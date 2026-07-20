@@ -1,0 +1,16 @@
+{
+  "hosting": {
+    "site": "koalascore-e7ffe",
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

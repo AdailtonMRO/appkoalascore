@@ -53,12 +53,16 @@ export function initializePWAMediaSession() {
         DeviceEventEmitter.emit('BluetoothMediaKey', 'media_previous');
       });
 
-      navigator.mediaSession.setActionHandler('toggleplaypause' as any, () => {
-        DeviceEventEmitter.emit('BluetoothMediaKey', 'media_togglePlayPause');
-        if (silentAudio) {
-          silentAudio.play().catch(() => {});
-        }
-      });
+      try {
+        navigator.mediaSession.setActionHandler('toggleplaypause' as any, () => {
+          DeviceEventEmitter.emit('BluetoothMediaKey', 'media_togglePlayPause');
+          if (silentAudio) {
+            silentAudio.play().catch(() => {});
+          }
+        });
+      } catch (err) {
+        console.warn('Browser does not support toggleplaypause media action:', err);
+      }
     }
   } catch (e) {
     console.warn('Failed to initialize PWA media session:', e);
@@ -77,7 +81,9 @@ export function cleanupPWAMediaSession() {
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
-      navigator.mediaSession.setActionHandler('toggleplaypause' as any, null);
+      try {
+        navigator.mediaSession.setActionHandler('toggleplaypause' as any, null);
+      } catch (err) {}
     }
   } catch (e) {
     console.warn('Failed to cleanup PWA media session:', e);

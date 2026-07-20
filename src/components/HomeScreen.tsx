@@ -70,7 +70,7 @@ function WebAdSense({ adClient, adSlot }: { adClient: string; adSlot: string }) 
 }
 
 interface HomeScreenProps {
-  onNavigate: (screen: 'setup' | 'remote' | 'history' | 'multiplayer_setup' | 'help' | 'login') => void;
+  onNavigate: (screen: 'setup' | 'remote' | 'history' | 'multiplayer_setup' | 'help' | 'login' | 'upgrade') => void;
   language: 'pt' | 'en' | 'es';
   onLanguageChange: (lang: 'pt' | 'en' | 'es') => void;
   connectionState: BleConnectionState;
@@ -314,6 +314,26 @@ export default function HomeScreen({
 
       {/* Menu Options */}
       <View style={styles.menuContainer}>
+        {/* Pro Upgrade Banner */}
+        {userTier === 'free' && (
+          <TouchableOpacity 
+            style={styles.proBanner} 
+            onPress={() => onNavigate('upgrade')}
+          >
+            <View style={styles.proBannerHeader}>
+              <Ionicons name="sparkles" size={18} color="#ccff00" />
+              <Text style={styles.proBannerTitle}>
+                {language === 'pt' ? 'Conheça o Koala Score PRO' : language === 'es' ? 'Prueba Koala Score PRO' : 'Get Koala Score PRO'}
+              </Text>
+            </View>
+            <Text style={styles.proBannerDesc}>
+              {language === 'pt' 
+                ? 'Use com Apple Watch, multiplayer com ranking, remotos Bluetooth e sem anúncios! Teste 7 dias grátis.' 
+                : 'Use with Apple Watch, multiplayer with ranking, Bluetooth remotes and no ads! Start 7-day free trial.'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Quick Start Option */}
         <TouchableOpacity 
           style={styles.menuItem} 
@@ -346,6 +366,43 @@ export default function HomeScreen({
           <View style={styles.menuTextCol}>
             <Text style={styles.menuItemTitle}>{t.setupBtn}</Text>
             <Text style={styles.menuItemDesc}>{t.setupDesc}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#475569" />
+        </TouchableOpacity>
+
+        {/* Multiplayer / Rotation Queue Option */}
+        <TouchableOpacity 
+          style={styles.menuItem} 
+          onPress={() => {
+            if (userTier === 'pro') {
+              onNavigate('multiplayer_setup');
+            } else {
+              Alert.alert(
+                language === 'pt' ? 'Recurso Premium (PRO)' : 'Premium Feature (PRO)',
+                language === 'pt' 
+                  ? 'A funcionalidade de Multiplayer com fila de rotação e ranking é exclusiva para usuários PRO. Deseja conhecer os planos?'
+                  : 'Multiplayer mode with rotation queue and rankings is exclusive for PRO users. Would you like to check our plans?',
+                [
+                  { text: language === 'pt' ? 'Agora Não' : 'Not Now', style: 'cancel' },
+                  { text: language === 'pt' ? 'Ver Planos' : 'View Plans', onPress: () => onNavigate('upgrade') }
+                ]
+              );
+            }
+          }}
+        >
+          <View style={[styles.iconWrapper, { backgroundColor: '#ec4899' }]}>
+            <Ionicons name="people" size={24} color="#fff" />
+            {userTier !== 'pro' && (
+              <View style={styles.lockBadge}>
+                <Ionicons name="lock-closed" size={10} color="#fff" />
+              </View>
+            )}
+          </View>
+          <View style={styles.menuTextCol}>
+            <Text style={styles.menuItemTitle}>
+              {t.multiplayerBtn} {userTier !== 'pro' && '🔒'}
+            </Text>
+            <Text style={styles.menuItemDesc}>{t.multiplayerDesc}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color="#475569" />
         </TouchableOpacity>
@@ -943,5 +1000,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     color: '#0f172a',
+  },
+  proBanner: {
+    backgroundColor: 'rgba(204, 255, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(204, 255, 0, 0.25)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+  },
+  proBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  proBannerTitle: {
+    color: '#ccff00',
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  proBannerDesc: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  lockBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#f43f5e',
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#090d16',
   },
 });

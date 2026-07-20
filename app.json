@@ -65,7 +65,7 @@
       }
     },
     "experiments": {
-      "baseUrl": "/appkoalascore"
+      "baseUrl": ""
     },
     "plugins": [
       [
