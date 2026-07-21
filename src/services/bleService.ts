@@ -142,13 +142,15 @@ class BluetoothService {
 
   private updateConnectionState(state: BleConnectionState) {
     this.connectionState = state;
-    this.onConnectionStateListeners.forEach((listener) => {
-      try {
-        listener(state);
-      } catch (e) {
-        console.warn('Error in BLE connection listener:', e);
-      }
-    });
+    if (this.onConnectionStateListeners) {
+      this.onConnectionStateListeners.forEach((listener) => {
+        try {
+          listener(state);
+        } catch (e) {
+          console.warn('Error in BLE connection listener:', e);
+        }
+      });
+    }
   }
 
   // Start scanning for BLE devices
