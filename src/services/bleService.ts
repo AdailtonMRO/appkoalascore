@@ -128,14 +128,24 @@ class BluetoothService {
 
   // Register connection state callback
   public onConnectionState(callback: (state: BleConnectionState) => void): () => void {
-    if (!this.onConnectionStateListeners) {
-      this.onConnectionStateListeners = new Set();
+    try {
+      if (!this.onConnectionStateListeners) {
+        this.onConnectionStateListeners = new Set();
+      }
+      if (typeof callback === 'function') {
+        this.onConnectionStateListeners.add(callback);
+        callback(this.connectionState || 'disconnected');
+      }
+    } catch (e) {
+      console.warn('Error adding connection state listener:', e);
     }
-    this.onConnectionStateListeners.add(callback);
-    callback(this.connectionState); // Emit current state immediately
     return () => {
-      if (this.onConnectionStateListeners) {
-        this.onConnectionStateListeners.delete(callback);
+      try {
+        if (this.onConnectionStateListeners && typeof callback === 'function') {
+          this.onConnectionStateListeners.delete(callback);
+        }
+      } catch (e) {
+        console.warn('Error removing connection state listener:', e);
       }
     };
   }
