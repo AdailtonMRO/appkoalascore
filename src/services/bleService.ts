@@ -25,7 +25,7 @@ class BluetoothService {
   private manager: any = null;
   private onPointTriggeredCallback: (player: 1 | 2) => void = () => {};
   private onButtonPressCallback: (buttonId: string) => void = () => {};
-  private onConnectionStateChanged: (state: BleConnectionState) => void = () => {};
+  private onConnectionStateListeners: Set<(state: BleConnectionState) => void> = new Set();
   private connectionState: BleConnectionState = 'disconnected';
   private connectedDeviceId: string | null = null;
   private isSimulated: boolean = false;
@@ -128,10 +128,15 @@ class BluetoothService {
 
   // Register connection state callback
   public onConnectionState(callback: (state: BleConnectionState) => void): () => void {
+    if (!this.onConnectionStateListeners) {
+      this.onConnectionStateListeners = new Set();
+    }
     this.onConnectionStateListeners.add(callback);
     callback(this.connectionState); // Emit current state immediately
     return () => {
-      this.onConnectionStateListeners.delete(callback);
+      if (this.onConnectionStateListeners) {
+        this.onConnectionStateListeners.delete(callback);
+      }
     };
   }
 
