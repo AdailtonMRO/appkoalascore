@@ -1,4 +1,4 @@
-const CACHE_NAME = 'koala-score-cache-v2';
+const CACHE_NAME = 'koala-score-cache-v3-bypass';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -9,9 +9,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
+          return caches.delete(cache);
         })
       );
     }).then(() => self.clients.claim())
@@ -19,10 +17,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Network-first strategy to avoid blank screen on new builds
-  event.respondWith(
-    fetch(event.request).catch(() => {
-      return caches.match(event.request);
-    })
-  );
+  // Always fetch directly from network to ensure latest JS bundles
+  event.respondWith(fetch(event.request));
 });
