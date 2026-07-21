@@ -118,15 +118,32 @@ class BluetoothService {
     this.onButtonPressCallback = callback;
   }
 
+  public getConnectionState(): BleConnectionState {
+    return this.connectionState;
+  }
+
+  public getConnectedDeviceId(): string | null {
+    return this.connectedDeviceId;
+  }
+
   // Register connection state callback
-  public onConnectionState(callback: (state: BleConnectionState) => void) {
-    this.onConnectionStateChanged = callback;
+  public onConnectionState(callback: (state: BleConnectionState) => void): () => void {
+    this.onConnectionStateListeners.add(callback);
     callback(this.connectionState); // Emit current state immediately
+    return () => {
+      this.onConnectionStateListeners.delete(callback);
+    };
   }
 
   private updateConnectionState(state: BleConnectionState) {
     this.connectionState = state;
-    this.onConnectionStateChanged(state);
+    this.onConnectionStateListeners.forEach((listener) => {
+      try {
+        listener(state);
+      } catch (e) {
+        console.warn('Error in BLE connection listener:', e);
+      }
+    });
   }
 
   // Start scanning for BLE devices

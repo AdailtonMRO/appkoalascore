@@ -1,0 +1,42 @@
+{
+  "packageId": "com.adailtonmro.koalatenisscore",
+  "host": "koalascore-e7ffe.web.app",
+  "name": "Koala Tênis Score",
+  "launcherName": "Koala Score",
+  "display": "standalone",
+  "themeColor": "#0F1115",
+  "navigationColor": "#0F1115",
+  "navigationColorDark": "#0F1115",
+  "navigationDividerColor": "#0F1115",
+  "navigationDividerColorDark": "#0F1115",
+  "backgroundColor": "#0F1115",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://koalascore-e7ffe.web.app/assets/icon.png",
+  "maskableIconUrl": "https://koalascore-e7ffe.web.app/assets/icon.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "c:/Users/Adail/Documents/App Placar Celular/android/app/release.keystore",
+    "alias": "koala-tenis-key"
+  },
+  "appVersionName": "1.0.1",
+  "appVersionCode": 2,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://koalascore-e7ffe.web.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": "true",
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "orientation": "default",
+  "fingerprints": [
+    {
+      "value": "93:EC:72:FE:FE:3F:59:06:66:10:A0:6A:7D:E1:EF:75:76:A3:B1:E4:A1:A6:77:F2:BB:9A:C7:30:C2:3E:87:05"
+    }
+  ],
+  "additionalTrustedOrigins": []
+}

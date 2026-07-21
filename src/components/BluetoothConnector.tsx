@@ -348,8 +348,12 @@ export default function BluetoothConnector({
 
   // Subscribe to connection state changes
   useEffect(() => {
-    bleService.onConnectionState((state) => {
+    // Initial fetch of active device and state
+    setConnectedDeviceId(bleService.getConnectedDeviceId());
+
+    const unsubscribe = bleService.onConnectionState((state) => {
       setConnectionState(state);
+      setConnectedDeviceId(bleService.getConnectedDeviceId());
       if (state === 'disconnected') {
         setConnectedDeviceId(null);
       }
@@ -359,6 +363,10 @@ export default function BluetoothConnector({
     bleService.onPointTriggered((player) => {
       onPointTriggered(player);
     });
+
+    return () => {
+      unsubscribe();
+    };
   }, [onPointTriggered]);
 
   const handleScanToggle = () => {
@@ -535,49 +543,6 @@ export default function BluetoothConnector({
         <Ionicons name="open-outline" size={16} color="#f97316" />
       </TouchableOpacity>
 
-      {/* Button Configuration Panel */}
-      <View style={styles.configCard}>
-        <View style={styles.configHeader}>
-          <Ionicons name="cog-outline" size={20} color="#ccff00" />
-          <Text style={styles.configTitle}>{t.configTitle}</Text>
-        </View>
-        <Text style={styles.configDesc}>{t.configDesc}</Text>
-
-        <View style={styles.configList}>
-          {Array.from({ length: 9 }).map((_, i) => {
-            const btnId = String(i + 1);
-            const mappedAction = buttonMappings[btnId] || 'none';
-            const actionLabel = (t as any)[`action_${mappedAction}`] || mappedAction;
-
-            return (
-              <TouchableOpacity
-                key={btnId}
-                style={styles.configRow}
-                onPress={() => {
-                  if (userTier === 'pro') {
-                    setEditingBtnId(btnId);
-                  } else {
-                    Alert.alert(
-                      language === 'pt' ? 'Mapeamento Customizado (PRO)' : 'Custom Mapping (PRO)',
-                      language === 'pt' 
-                        ? 'O mapeamento customizado de botões e teclas de atalho é exclusivo para usuários PRO.'
-                        : 'Custom remote key/button mapping is exclusive to PRO users.'
-                    );
-                  }
-                }}
-              >
-                <View style={styles.btnBadge}>
-                  <Text style={styles.btnBadgeText}>{btnId}</Text>
-                </View>
-                <Text style={styles.btnActionText}>{actionLabel}</Text>
-                <Ionicons name="pencil" size={14} color="#64748b" />
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-
       {/* Physical Remote Mapping Panel */}
       <View style={styles.configCard}>
         <View style={styles.configHeader}>
@@ -625,19 +590,6 @@ export default function BluetoothConnector({
             );
           })}
         </View>
-      </View>
-
-      {/* Physical Remote Diagnostics Panel */}
-      <View style={styles.diagCard}>
-        <View style={styles.diagHeader}>
-          <Ionicons name="construct-outline" size={20} color="#ccff00" />
-          <Text style={styles.diagTitle}>{t.diagTitle}</Text>
-        </View>
-        <Text style={styles.diagDesc}>{t.diagDesc}</Text>
-        <TouchableOpacity style={styles.diagBtn} onPress={() => setShowDiagnosticModal(true)}>
-          <Ionicons name="play" size={16} color="#0f172a" />
-          <Text style={styles.diagBtnText}>{t.diagBtn}</Text>
-        </TouchableOpacity>
       </View>
 
       {/* Smart Watch Remote Configuration Panel */}
@@ -691,187 +643,65 @@ export default function BluetoothConnector({
             </View>
 
             <View style={styles.instructionsBox}>
-              <Text style={styles.instructionsTitle}>Configuração Passo a Passo (Atalhos iOS):</Text>
-              <Text style={styles.instructionStep}>1. Abra o app "Atalhos" no iPhone e crie um novo atalho.</Text>
-              <Text style={styles.instructionStep}>2. Adicione a ação "Obter Conteúdo da URL".</Text>
-              <Text style={styles.instructionStep}>3. Configure a URL como:</Text>
-              <Text style={styles.urlCode}>
-                https://{process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('https://', '') || 'sua-url-supabase.supabase.co'}/rest/v1/watch_events
+              <Text style={styles.instructionsTitle}>
+                {language === 'pt' ? '📱 Passo a Passo: Atalhos do iOS / Apple Watch' : 
+                 language === 'es' ? '📱 Paso a Paso: Atalhos del iOS / Apple Watch' : 
+                 '📱 Step by Step: iOS Shortcuts / Apple Watch'}
               </Text>
-              <Text style={styles.instructionStep}>4. Altere o método de requisição para "POST".</Text>
-              <Text style={styles.instructionStep}>5. Adicione os seguintes cabeçalhos (Headers):</Text>
-              <Text style={styles.headerCode}>
-                apikey: {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 15) || 'sua-chave'}...{'\n'}
-                Authorization: Bearer {process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 15) || 'sua-chave'}...
+              
+              <Text style={styles.instructionStep}>
+                1. {language === 'pt' ? 'Abra o aplicativo **Atalhos** no seu iPhone e toque no botão **"+"** para criar um novo atalho.' : 'Open the **Shortcuts** app on your iPhone and tap **"+"** to create a new shortcut.'}
               </Text>
-              <Text style={styles.instructionStep}>6. No corpo do JSON (Request Body), insira:</Text>
-              <Text style={styles.jsonCode}>
+              <Text style={styles.instructionStep}>
+                2. {language === 'pt' ? 'Adicione a ação **"Obter Conteúdo da URL"** (Obtain Contents of URL).' : 'Add the action **"Get Contents of URL"**.'}
+              </Text>
+              <Text style={styles.instructionStep}>
+                3. {language === 'pt' ? 'Insira a URL oficial do servidor Firebase Hosting:' : 'Enter the official Firebase Hosting server URL:'}
+              </Text>
+              <Text style={styles.urlCode} selectable={true}>
+                https://firestore.googleapis.com/v1/projects/koalascore-e7ffe/databases/(default)/documents/watch_events
+              </Text>
+              <Text style={styles.instructionStep}>
+                4. {language === 'pt' ? 'Altere o Método HTTP para **POST**.' : 'Change the HTTP Method to **POST**.'}
+              </Text>
+              <Text style={styles.instructionStep}>
+                5. {language === 'pt' ? 'Em **Cabeçalhos (Headers)**, adicione a chave abaixo:' : 'In **Headers**, add the following key:'}
+              </Text>
+              <Text style={styles.headerCode} selectable={true}>
+                Content-Type: application/json
+              </Text>
+              <Text style={styles.instructionStep}>
+                6. {language === 'pt' ? 'No **Corpo do Pedido (Request Body)**, selecione **JSON** e insira a seguinte estrutura:' : 'In **Request Body**, select **JSON** and enter the following payload:'}
+              </Text>
+              <Text style={styles.jsonCode} selectable={true}>
                 {`{
-  "api_key": "${userApiKey || 'SUA_CHAVE_API'}",
-  "action": "addPointP1"
+  "fields": {
+    "api_key": {
+      "stringValue": "${userApiKey || 'SUA_CHAVE_API'}"
+    },
+    "action": {
+      "stringValue": "addPointP1"
+    }
+  }
 }`}
               </Text>
-              <Text style={styles.instructionStep}>7. Ações suportadas em "action":</Text>
-              <Text style={styles.bulletStep}>• "addPointP1" - Ponto para Jogador 1</Text>
-              <Text style={styles.bulletStep}>• "addPointP2" - Ponto para Jogador 2</Text>
-              <Text style={styles.bulletStep}>• "undo" - Desfazer último ponto</Text>
-              <Text style={styles.bulletStep}>• "reset" - Reiniciar a partida</Text>
+              <Text style={styles.instructionStep}>
+                7. {language === 'pt' ? 'Comandos aceitos no campo **"action"**:' : 'Supported commands in **"action"**:'}
+              </Text>
+              <Text style={styles.bulletStep}>• <Text style={{ color: '#ccff00', fontWeight: 'bold' }}>"addPointP1"</Text> : {language === 'pt' ? `Ponto para ${player1Name}` : `Point for ${player1Name}`}</Text>
+              <Text style={styles.bulletStep}>• <Text style={{ color: '#ccff00', fontWeight: 'bold' }}>"addPointP2"</Text> : {language === 'pt' ? `Ponto para ${player2Name}` : `Point for ${player2Name}`}</Text>
+              <Text style={styles.bulletStep}>• <Text style={{ color: '#ccff00', fontWeight: 'bold' }}>"undo"</Text> : {language === 'pt' ? 'Desfazer último ponto' : 'Undo last point'}</Text>
+              <Text style={styles.bulletStep}>• <Text style={{ color: '#ccff00', fontWeight: 'bold' }}>"reset"</Text> : {language === 'pt' ? 'Reiniciar a partida' : 'Reset the match'}</Text>
+
+              <Text style={[styles.instructionStep, { marginTop: 12, fontStyle: 'italic', color: '#94a3b8' }]}>
+                💡 {language === 'pt' 
+                  ? 'Dica: Nas configurações do atalho no iPhone, ative a opção "Mostrar no Apple Watch" para acionar os pontos diretamente pelo relógio durante o jogo!' 
+                  : 'Tip: In the shortcut settings on iPhone, enable "Show on Apple Watch" to trigger points directly from your watch!'}
+              </Text>
             </View>
           </View>
         )}
       </View>
-
-      {/* Action Selector Modal */}
-      <Modal
-        visible={editingBtnId !== null}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setEditingBtnId(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              {t.selectActionTitle} {editingBtnId}
-            </Text>
-
-            <ScrollView style={styles.actionsListScroll}>
-              {ACTIONS_LIST.map((action) => {
-                const actionLabel = (t as any)[`action_${action}`] || action;
-                const isSelected = editingBtnId ? buttonMappings[editingBtnId] === action : false;
-
-                return (
-                  <TouchableOpacity
-                    key={action}
-                    style={[styles.actionOption, isSelected && styles.actionOptionSelected]}
-                    onPress={() => {
-                      if (editingBtnId) {
-                        onUpdateMapping(editingBtnId, action);
-                      }
-                      setEditingBtnId(null);
-                    }}
-                  >
-                    <Text style={[styles.actionOptionText, isSelected && styles.actionOptionTextSelected]}>
-                      {actionLabel}
-                    </Text>
-                    {isSelected && <Ionicons name="checkmark" size={18} color="#ccff00" />}
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setEditingBtnId(null)}>
-              <Text style={styles.modalCloseBtnText}>{t.closeBtn}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Remote Diagnostics Modal */}
-      <Modal
-        visible={showDiagnosticModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowDiagnosticModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { maxHeight: '90%', width: '95%' }]}>
-            <Text style={styles.modalTitle}>{t.diagModalTitle}</Text>
-            
-            <Text style={styles.diagModalInstructions}>{t.diagModalInstructions}</Text>
-
-            {/* Invisible TextInput to capture keystrokes */}
-            <TextInput
-              ref={textInputRef}
-              style={styles.invisibleInput}
-              showSoftInputOnFocus={false}
-              autoComplete="off"
-              autoCorrect={false}
-              value=""
-              onChangeText={(text) => {
-                if (text) {
-                  addDiagnosticLog('key', `Texto: "${text}"`);
-                  textInputRef.current?.clear();
-                }
-              }}
-              onKeyPress={(e) => {
-                const key = e.nativeEvent.key;
-                addDiagnosticLog('key', `Tecla: "${key}"`);
-              }}
-            />
-
-            {/* Interactive touch/gesture testing pad */}
-            <View
-              style={styles.testPad}
-              onStartShouldSetResponder={() => true}
-              onResponderGrant={(e) => {
-                const { pageX, pageY } = e.nativeEvent;
-                touchStartRef.current = { x: pageX, y: pageY, time: Date.now() };
-              }}
-              onResponderRelease={(e) => {
-                const { locationX, locationY, pageX, pageY } = e.nativeEvent;
-                const start = touchStartRef.current;
-                if (start) {
-                  const dx = pageX - start.x;
-                  const dy = pageY - start.y;
-                  const dt = Date.now() - start.time;
-                  const dist = Math.sqrt(dx * dx + dy * dy);
-
-                  if (dist > 35) {
-                    let direction = '';
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                      direction = dx > 0 ? (language === 'pt' ? 'Direita' : language === 'es' ? 'Derecha' : 'Right') : (language === 'pt' ? 'Esquerda' : language === 'es' ? 'Izquierda' : 'Left');
-                    } else {
-                      direction = dy > 0 ? (language === 'pt' ? 'Baixo' : language === 'es' ? 'Abajo' : 'Down') : (language === 'pt' ? 'Cima' : language === 'es' ? 'Arriba' : 'Up');
-                    }
-                    addDiagnosticLog('gesture', `Deslizar para ${direction} (dist: ${Math.round(dist)}px, ${dt}ms)`);
-                  } else {
-                    addDiagnosticLog('touch', `Toque em X: ${Math.round(locationX)}, Y: ${Math.round(locationY)}`);
-                  }
-                }
-              }}
-            >
-              <Ionicons name="finger-print-outline" size={40} color="rgba(204, 255, 0, 0.4)" />
-              <Text style={styles.testPadText}>
-                {language === 'pt' ? 'ÁREA DE TESTE DE TOQUE / GESTO\n(Pressione botões aqui ou arraste)' : 
-                 language === 'es' ? 'ÁREA DE PRUEBA DE TOQUE / GESTO\n(Presiona botones aquí o arrastra)' : 
-                 'TOUCH / GESTURE TEST PAD\n(Press remote buttons here or drag)'}
-              </Text>
-            </View>
-
-            {/* List of logs */}
-            <Text style={styles.logListHeader}>
-              {language === 'pt' ? 'Sinais Recebidos (Últimos 50):' : 
-               language === 'es' ? 'Señales Recibidas (Últimas 50):' : 
-               'Received Signals (Last 50):'}
-            </Text>
-            
-            <ScrollView style={styles.logsScroll} contentContainerStyle={diagnosticLogs.length === 0 && { flexGrow: 1, justifyContent: 'center' }}>
-              {diagnosticLogs.length === 0 ? (
-                <Text style={styles.emptyLogText}>{t.diagLogEmpty}</Text>
-              ) : (
-                diagnosticLogs.map((log) => (
-                  <View key={log.id} style={styles.logItem}>
-                    <Text style={styles.logTime}>{log.timestamp}</Text>
-                    <View style={[styles.logTypeBadge, styles[`badge_${log.type}`]]}>
-                      <Text style={styles.logTypeText}>{log.type.toUpperCase()}</Text>
-                    </View>
-                    <Text style={styles.logDetail}>{log.detail}</Text>
-                  </View>
-                ))
-              )}
-            </ScrollView>
-
-            <View style={styles.modalButtonRow}>
-              <TouchableOpacity style={[styles.modalActionBtn, styles.clearBtn]} onPress={clearDiagnosticLogs}>
-                <Text style={styles.clearBtnText}>{t.diagLogClear}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalActionBtn, styles.closeBtnModal]} onPress={() => setShowDiagnosticModal(false)}>
-                <Text style={styles.closeBtnTextModal}>{t.closeBtn}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Recording Trigger Modal */}
       <Modal

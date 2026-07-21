@@ -15,15 +15,17 @@ if (!fs.existsSync(destDir)) {
 
 function copyFolderSync(from, to) {
   if (!fs.existsSync(to)) {
-    fs.mkdirSync(to);
+    fs.mkdirSync(to, { recursive: true });
   }
   fs.readdirSync(from).forEach((element) => {
-    const stat = fs.lstatSync(path.join(from, element));
+    const fromPath = path.join(from, element);
+    const toPath = path.join(to, element);
+    const stat = fs.lstatSync(fromPath);
     if (stat.isFile()) {
-      fs.copyFileSync(path.join(from, element), path.join(to, element));
-      console.log(`Copied: ${element}`);
+      fs.copyFileSync(fromPath, toPath);
+      console.log(`Copied file: ${element}`);
     } else if (stat.isDirectory()) {
-      copyFolderSync(path.join(from, element), path.join(to, element));
+      copyFolderSync(fromPath, toPath);
     }
   });
 }
