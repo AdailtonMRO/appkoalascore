@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.adailtonmro.koalatenisscore",
+      "sha256_cert_fingerprints": [
+        "93:EC:72:FE:FE:3F:59:06:66:10:A0:6A:7D:E1:EF:75:76:A3:B1:E4:A1:A6:77:F2:BB:9A:C7:30:C2:3E:87:05"
+      ]
+    }
+  }
+]
