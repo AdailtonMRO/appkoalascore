@@ -18,6 +18,57 @@ interface MultiplayerRankingProps {
   language: 'pt' | 'en' | 'es';
 }
 
+const LOCALIZATION = {
+  pt: {
+    title: 'RANKING DO TREINO',
+    subtitle: 'Classificação geral por número de vitórias',
+    champTitle: 'CAMPEÃO DO TREINO!',
+    noWins: 'Sem partidas disputadas',
+    saveBtn: 'Salvar no Histórico',
+    savedBtn: 'Salvo!',
+    exitBtn: 'Voltar ao Menu',
+    playerLabel: 'Jogador',
+    winsLabel: 'Vitórias',
+    successTitle: 'Sucesso',
+    successMsg: 'Treino salvo com sucesso no seu Histórico!',
+    errorTitle: 'Erro',
+    errorMsg: 'Não foi possível salvar o treino.',
+    gamesPlayed: (count: number) => `Partidas Jogadas: ${count}`,
+  },
+  en: {
+    title: 'TRAINING RANKING',
+    subtitle: 'Overall standings by number of wins',
+    champTitle: 'SESSION CHAMPION!',
+    noWins: 'No matches played',
+    saveBtn: 'Save to History',
+    savedBtn: 'Saved!',
+    exitBtn: 'Back to Menu',
+    playerLabel: 'Player',
+    winsLabel: 'Wins',
+    successTitle: 'Success',
+    successMsg: 'Training session successfully saved to History!',
+    errorTitle: 'Error',
+    errorMsg: 'Could not save the training session.',
+    gamesPlayed: (count: number) => `Matches Played: ${count}`,
+  },
+  es: {
+    title: 'RANKING DEL ENTRENAMIENTO',
+    subtitle: 'Clasificación general por número de victorias',
+    champTitle: '¡CAMPEÓN DEL ENTRENAMIENTO!',
+    noWins: 'Sin partidos jugados',
+    saveBtn: 'Guardar Historial',
+    savedBtn: '¡Guardado!',
+    exitBtn: 'Volver al Menú',
+    playerLabel: 'Jugador',
+    winsLabel: 'Victorias',
+    successTitle: 'Éxito',
+    successMsg: '¡Entrenamiento guardado con éxito en tu Historial!',
+    errorTitle: 'Error',
+    errorMsg: 'No se pudo guardar el entrenamiento.',
+    gamesPlayed: (count: number) => `Partidos Jugados: ${count}`,
+  }
+};
+
 export default function MultiplayerRanking({ sessionState, onExit, language }: MultiplayerRankingProps) {
   const [isSaved, setIsSaved] = useState(false);
 
@@ -46,58 +97,7 @@ export default function MultiplayerRanking({ sessionState, onExit, language }: M
     }
   };
 
-  const localization = {
-    pt: {
-      title: 'RANKING DO TREINO',
-      subtitle: 'Classificação geral por número de vitórias',
-      champTitle: 'CAMPEÃO DO TREINO!',
-      noWins: 'Sem partidas disputadas',
-      saveBtn: 'Salvar no Histórico',
-      savedBtn: 'Salvo!',
-      exitBtn: 'Voltar ao Menu',
-      playerLabel: 'Jogador',
-      winsLabel: 'Vitórias',
-      successTitle: 'Sucesso',
-      successMsg: 'Treino salvo com sucesso no seu Histórico!',
-      errorTitle: 'Erro',
-      errorMsg: 'Não foi possível salvar o treino.',
-      gamesPlayed: (count: number) => `Partidas Jogadas: ${count}`,
-    },
-    en: {
-      title: 'TRAINING RANKING',
-      subtitle: 'Overall standings by number of wins',
-      champTitle: 'SESSION CHAMPION!',
-      noWins: 'No matches played',
-      saveBtn: 'Save to History',
-      savedBtn: 'Saved!',
-      exitBtn: 'Back to Menu',
-      playerLabel: 'Player',
-      winsLabel: 'Wins',
-      successTitle: 'Success',
-      successMsg: 'Training session successfully saved to History!',
-      errorTitle: 'Error',
-      errorMsg: 'Could not save the training session.',
-      gamesPlayed: (count: number) => `Matches Played: ${count}`,
-    },
-    es: {
-      title: 'RANKING DEL ENTRENAMIENTO',
-      subtitle: 'Clasificación general por número de victorias',
-      champTitle: '¡CAMPEÓN DEL ENTRENAMIENTO!',
-      noWins: 'Sin partidos jugados',
-      saveBtn: 'Guardar Historial',
-      savedBtn: '¡Guardado!',
-      exitBtn: 'Volver al Menú',
-      playerLabel: 'Jugador',
-      winsLabel: 'Victorias',
-      successTitle: 'Éxito',
-      successMsg: '¡Entrenamiento guardado con éxito en tu Historial!',
-      errorTitle: 'Error',
-      errorMsg: 'No se pudo guardar el entrenamiento.',
-      gamesPlayed: (count: number) => `Partidos Jugados: ${count}`,
-    }
-  };
-
-  const t = localization[language] || localization.pt;
+  const t = LOCALIZATION[language] || LOCALIZATION.pt;
 
   return (
     <View style={styles.container}>

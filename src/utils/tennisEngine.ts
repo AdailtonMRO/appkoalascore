@@ -574,88 +574,91 @@ export function abandonMatch(
   };
 }
 
+// Translations dictionary (module-level, shared across calls)
+const dict = {
+  pt: {
+    matchWon: (winner: string) => `Fim de jogo. Vitória de ${winner}!`,
+    superTBAll: (pts: number) => `Super tie-break, ${pts} iguais`,
+    superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} a ${pts2}`,
+    tbAll: (pts: number) => `Tie-break, ${pts} iguais`,
+    tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} a ${pts2}`,
+    deuce: 'Iguais',
+    advantage: (player: string) => `Vantagem ${player}`,
+    love: 'zero',
+    all: 'iguais',
+    to: 'a',
+    setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
+      `Fim do set. Set para ${winner}, ${g1} a ${g2}. Placar em sets: ${s1} a ${s2}`,
+    gameWon: (winner: string, g1: number, g2: number) => 
+      `Jogo para ${winner}. Placar do set: ${g1} a ${g2}`,
+  },
+  en: {
+    matchWon: (winner: string) => `Game, set and match, ${winner}!`,
+    superTBAll: (pts: number) => `Super tie-break, ${pts} all`,
+    superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} to ${pts2}`,
+    tbAll: (pts: number) => `Tie-break, ${pts} all`,
+    tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} to ${pts2}`,
+    deuce: 'Deuce',
+    advantage: (player: string) => `Advantage ${player}`,
+    love: 'love',
+    all: 'all',
+    to: 'to',
+    setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
+      `Set won by ${winner}, ${g1} to ${g2}. Sets score: ${s1} to ${s2}`,
+    gameWon: (winner: string, g1: number, g2: number) => 
+      `Game for ${winner}. Set score: ${g1} to ${g2}`,
+  },
+  es: {
+    matchWon: (winner: string) => `Fin del partido. ¡Victoria de ${winner}!`,
+    superTBAll: (pts: number) => `Super tie-break, ${pts} iguales`,
+    superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} a ${pts2}`,
+    tbAll: (pts: number) => `Tie-break, ${pts} iguales`,
+    tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} a ${pts2}`,
+    deuce: 'Iguales',
+    advantage: (player: string) => `Ventaja ${player}`,
+    love: 'cero',
+    all: 'iguales',
+    to: 'a',
+    setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
+      `Fin del set. Set para ${winner}, ${g1} a ${g2}. Marcador de sets: ${s1} a ${s2}`,
+    gameWon: (winner: string, g1: number, g2: number) => 
+      `Juego para ${winner}. Marcador del set: ${g1} a ${g2}`,
+  },
+};
+
+// Abandonment reason translations (module-level, shared across calls)
+const reasonTextDict = {
+  weather: {
+    pt: 'chuva ou clima',
+    en: 'rain or weather conditions',
+    es: 'lluvia o clima',
+  },
+  power_outage: {
+    pt: 'falta de energia',
+    en: 'power outage',
+    es: 'falta de energía',
+  },
+  court_issue: {
+    pt: 'problemas na quadra ou rede',
+    en: 'court or net issues',
+    es: 'problemas en la cancha o red',
+  },
+  other: {
+    pt: 'motivos de força maior',
+    en: 'unforeseen circumstances',
+    es: 'motivos de fuerza mayor',
+  },
+};
+
 // Generate the speech text based on the match state
 export function getScoreSpeechAnnouncement(state: MatchState, lastScorer?: 1 | 2): string {
   const lang = state.config.language || 'pt';
-
-  // Translations dictionary
-  const dict = {
-    pt: {
-      matchWon: (winner: string) => `Fim de jogo. Vitória de ${winner}!`,
-      superTBAll: (pts: number) => `Super tie-break, ${pts} iguais`,
-      superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} a ${pts2}`,
-      tbAll: (pts: number) => `Tie-break, ${pts} iguais`,
-      tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} a ${pts2}`,
-      deuce: 'Iguais',
-      advantage: (player: string) => `Vantagem ${player}`,
-      love: 'zero',
-      all: 'iguais',
-      to: 'a',
-      setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
-        `Fim do set. Set para ${winner}, ${g1} a ${g2}. Placar em sets: ${s1} a ${s2}`,
-      gameWon: (winner: string, g1: number, g2: number) => 
-        `Jogo para ${winner}. Placar do set: ${g1} a ${g2}`,
-    },
-    en: {
-      matchWon: (winner: string) => `Game, set and match, ${winner}!`,
-      superTBAll: (pts: number) => `Super tie-break, ${pts} all`,
-      superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} to ${pts2}`,
-      tbAll: (pts: number) => `Tie-break, ${pts} all`,
-      tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} to ${pts2}`,
-      deuce: 'Deuce',
-      advantage: (player: string) => `Advantage ${player}`,
-      love: 'love',
-      all: 'all',
-      to: 'to',
-      setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
-        `Set won by ${winner}, ${g1} to ${g2}. Sets score: ${s1} to ${s2}`,
-      gameWon: (winner: string, g1: number, g2: number) => 
-        `Game for ${winner}. Set score: ${g1} to ${g2}`,
-    },
-    es: {
-      matchWon: (winner: string) => `Fin del partido. ¡Victoria de ${winner}!`,
-      superTBAll: (pts: number) => `Super tie-break, ${pts} iguales`,
-      superTB: (pts1: number, pts2: number) => `Super tie-break, ${pts1} a ${pts2}`,
-      tbAll: (pts: number) => `Tie-break, ${pts} iguales`,
-      tb: (pts1: number, pts2: number) => `Tie-break, ${pts1} a ${pts2}`,
-      deuce: 'Iguales',
-      advantage: (player: string) => `Ventaja ${player}`,
-      love: 'cero',
-      all: 'iguales',
-      to: 'a',
-      setWon: (winner: string, g1: number, g2: number, s1: number, s2: number) => 
-        `Fin del set. Set para ${winner}, ${g1} a ${g2}. Marcador de sets: ${s1} a ${s2}`,
-      gameWon: (winner: string, g1: number, g2: number) => 
-        `Juego para ${winner}. Marcador del set: ${g1} a ${g2}`,
-    },
-  };
 
   const t = dict[lang] || dict.pt;
 
   // If match is abandoned
   if (state.terminationType === 'abandoned') {
-    const reasonText = {
-      weather: {
-        pt: 'chuva ou clima',
-        en: 'rain or weather conditions',
-        es: 'lluvia o clima',
-      },
-      power_outage: {
-        pt: 'falta de energia',
-        en: 'power outage',
-        es: 'falta de energía',
-      },
-      court_issue: {
-        pt: 'problemas na quadra ou rede',
-        en: 'court or net issues',
-        es: 'problemas en la cancha o red',
-      },
-      other: {
-        pt: 'motivos de força maior',
-        en: 'unforeseen circumstances',
-        es: 'motivos de fuerza mayor',
-      },
-    }[state.abandonmentReason || 'other'][lang] || 'chuva';
+    const reasonText = reasonTextDict[state.abandonmentReason || 'other'][lang] || 'chuva';
 
     const speechText = {
       pt: `Partida suspensa devido a ${reasonText}. Sem vencedor definido.`,

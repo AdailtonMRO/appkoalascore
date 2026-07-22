@@ -19,6 +19,75 @@ interface MultiplayerSetupProps {
   embedded?: boolean;
 }
 
+const LOCALIZATION = {
+  pt: {
+    title: 'JOGOS TREINO (MULTIPLAYER)',
+    subtitle: 'Organize fila e revezamento de jogadores',
+    back: 'Voltar',
+    modeLabel: 'Modalidade',
+    singles: 'Individual',
+    doubles: 'Duplas',
+    formatLabel: 'Duração da Partida',
+    bestOf3: 'Melhor de 3 Games',
+    bestOf3Desc: 'Vence quem fizer 2 games',
+    bestOf5: 'Melhor de 5 Games',
+    bestOf5Desc: 'Vence quem fizer 3 games',
+    playersLabel: 'Jogadores Cadastrados',
+    addPlaceholder: 'Nome do jogador',
+    addBtn: 'Adicionar',
+    startBtn: 'SORTEAR E INICIAR',
+    playerExistsMsg: 'Já existe um jogador com este nome.',
+    minSinglesMsg: 'Para o modo Individual, cadastre no mínimo 2 jogadores.',
+    minDoublesMsg: 'Para o modo Duplas, cadastre no mínimo 4 jogadores.',
+    errorTitle: 'Aviso',
+    registeredTitle: 'Lista de Espera:',
+  },
+  en: {
+    title: 'TRAINING MATCHES (MULTIPLAYER)',
+    subtitle: 'Organize player queue and rotation',
+    back: 'Back',
+    modeLabel: 'Match Mode',
+    singles: 'Singles',
+    doubles: 'Doubles',
+    formatLabel: 'Match Format',
+    bestOf3: 'Best of 3 Games',
+    bestOf3Desc: 'First to win 2 games wins',
+    bestOf5: 'Best of 5 Games',
+    bestOf5Desc: 'First to win 3 games wins',
+    playersLabel: 'Registered Players',
+    addPlaceholder: 'Player name',
+    addBtn: 'Add',
+    startBtn: 'DRAW & START MATCH',
+    playerExistsMsg: 'A player with this name already exists.',
+    minSinglesMsg: 'For Singles mode, register at least 2 players.',
+    minDoublesMsg: 'For Doubles mode, register at least 4 players.',
+    errorTitle: 'Warning',
+    registeredTitle: 'Waiting List:',
+  },
+  es: {
+    title: 'ENTRENAMIENTOS (MULTIPLAYER)',
+    subtitle: 'Organiza fila y relevo de jugadores',
+    back: 'Volver',
+    modeLabel: 'Modalidad',
+    singles: 'Individuales',
+    doubles: 'Dobles',
+    formatLabel: 'Duración del Partido',
+    bestOf3: 'Mejor de 3 Games',
+    bestOf3Desc: 'Gana el que haga 2 games',
+    bestOf5: 'Mejor de 5 Games',
+    bestOf5Desc: 'Gana el que haga 3 games',
+    playersLabel: 'Jugadores Registrados',
+    addPlaceholder: 'Nombre del jugador',
+    addBtn: 'Añadir',
+    startBtn: 'SORTEAR E INICIAR',
+    playerExistsMsg: 'Ya existe un jugador con este nombre.',
+    minSinglesMsg: 'Para el modo Individuales, registra al menos 2 jugadores.',
+    minDoublesMsg: 'Para el modo Dobles, registra al menos 4 jugadores.',
+    errorTitle: 'Aviso',
+    registeredTitle: 'Lista de Espera:',
+  }
+};
+
 export default function MultiplayerSetup({ onStart, onBack, language, embedded = false }: MultiplayerSetupProps) {
   const [mode, setMode] = useState<'singles' | 'doubles'>('singles');
   const [bestOfGames, setBestOfGames] = useState<3 | 5>(3);
@@ -61,76 +130,7 @@ export default function MultiplayerSetup({ onStart, onBack, language, embedded =
     onStart(sessionState);
   };
 
-  const localization = {
-    pt: {
-      title: 'JOGOS TREINO (MULTIPLAYER)',
-      subtitle: 'Organize fila e revezamento de jogadores',
-      back: 'Voltar',
-      modeLabel: 'Modalidade',
-      singles: 'Individual',
-      doubles: 'Duplas',
-      formatLabel: 'Duração da Partida',
-      bestOf3: 'Melhor de 3 Games',
-      bestOf3Desc: 'Vence quem fizer 2 games',
-      bestOf5: 'Melhor de 5 Games',
-      bestOf5Desc: 'Vence quem fizer 3 games',
-      playersLabel: 'Jogadores Cadastrados',
-      addPlaceholder: 'Nome do jogador',
-      addBtn: 'Adicionar',
-      startBtn: 'SORTEAR E INICIAR',
-      playerExistsMsg: 'Já existe um jogador com este nome.',
-      minSinglesMsg: 'Para o modo Individual, cadastre no mínimo 2 jogadores.',
-      minDoublesMsg: 'Para o modo Duplas, cadastre no mínimo 4 jogadores.',
-      errorTitle: 'Aviso',
-      registeredTitle: 'Lista de Espera:',
-    },
-    en: {
-      title: 'TRAINING MATCHES (MULTIPLAYER)',
-      subtitle: 'Organize player queue and rotation',
-      back: 'Back',
-      modeLabel: 'Match Mode',
-      singles: 'Singles',
-      doubles: 'Doubles',
-      formatLabel: 'Match Format',
-      bestOf3: 'Best of 3 Games',
-      bestOf3Desc: 'First to win 2 games wins',
-      bestOf5: 'Best of 5 Games',
-      bestOf5Desc: 'First to win 3 games wins',
-      playersLabel: 'Registered Players',
-      addPlaceholder: 'Player name',
-      addBtn: 'Add',
-      startBtn: 'DRAW & START MATCH',
-      playerExistsMsg: 'A player with this name already exists.',
-      minSinglesMsg: 'For Singles mode, register at least 2 players.',
-      minDoublesMsg: 'For Doubles mode, register at least 4 players.',
-      errorTitle: 'Warning',
-      registeredTitle: 'Waiting List:',
-    },
-    es: {
-      title: 'ENTRENAMIENTOS (MULTIPLAYER)',
-      subtitle: 'Organiza fila y relevo de jugadores',
-      back: 'Volver',
-      modeLabel: 'Modalidad',
-      singles: 'Individuales',
-      doubles: 'Dobles',
-      formatLabel: 'Duración del Partido',
-      bestOf3: 'Mejor de 3 Games',
-      bestOf3Desc: 'Gana el que haga 2 games',
-      bestOf5: 'Mejor de 5 Games',
-      bestOf5Desc: 'Gana el que haga 3 games',
-      playersLabel: 'Jugadores Registrados',
-      addPlaceholder: 'Nombre del jugador',
-      addBtn: 'Añadir',
-      startBtn: 'SORTEAR E INICIAR',
-      playerExistsMsg: 'Ya existe un jugador con este nombre.',
-      minSinglesMsg: 'Para el modo Individuales, registra al menos 2 jugadores.',
-      minDoublesMsg: 'Para el modo Dobles, registra al menos 4 jugadores.',
-      errorTitle: 'Aviso',
-      registeredTitle: 'Lista de Espera:',
-    }
-  };
-
-  const t = localization[language] || localization.pt;
+  const t = LOCALIZATION[language] || LOCALIZATION.pt;
 
   const content = (
     <View style={embedded ? { paddingVertical: 10 } : null}>

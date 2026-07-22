@@ -10,6 +10,24 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { MatchState, getDisplayPoints } from '../utils/tennisEngine';
 
+// Localized Labels
+const labels = {
+  pt: { points: 'PONTOS' },
+  en: { points: 'POINTS' },
+  es: { points: 'PUNTOS' },
+};
+
+// Helper to split name into first name and uppercase last name
+const formatPlayerName = (fullName: string) => {
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length <= 1) {
+    return { first: '', last: fullName.toUpperCase() };
+  }
+  const last = parts[parts.length - 1].toUpperCase();
+  const first = parts.slice(0, -1).join(' ');
+  return { first, last };
+};
+
 interface GrandSlamScoreboardProps {
   matchState: MatchState;
   onAddPoint: (player: 1 | 2) => void;
@@ -33,24 +51,7 @@ export default function GrandSlamScoreboard({
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
 
-  // Localized Labels
-  const labels = {
-    pt: { points: 'PONTOS', set: 'SET', court: 'QUADRA 11' },
-    en: { points: 'POINTS', set: 'SET', court: 'COURT 11' },
-    es: { points: 'PUNTOS', set: 'SET', court: 'CANCHA 11' },
-  };
   const t = labels[config.language || 'pt'] || labels.pt;
-
-  // Helper to split name into first name and uppercase last name
-  const formatPlayerName = (fullName: string) => {
-    const parts = fullName.trim().split(/\s+/);
-    if (parts.length <= 1) {
-      return { first: '', last: fullName.toUpperCase() };
-    }
-    const last = parts[parts.length - 1].toUpperCase();
-    const first = parts.slice(0, -1).join(' ');
-    return { first, last };
-  };
 
   // Convert raw points to display points
   const activeSetForPoints = setScores[currentSetIndex];
@@ -76,7 +77,6 @@ export default function GrandSlamScoreboard({
   // DYNAMIC SIZES (Where size values are adjusted dynamically according to window dimensions)
   const headerFontSize = isLandscape ? Math.max(height * 0.026, 9) : Math.max(width * 0.024, 9);
   const nameFontSize = isLandscape ? Math.max(height * 0.07, 18) : Math.max(width * 0.06, 15);
-  const nameSubFontSize = nameFontSize * 0.65;
   const pointsFontSize = isLandscape ? Math.max(height * 0.15, 26) : Math.max(width * 0.11, 22);
   const setScoreFontSize = isLandscape ? Math.max(height * 0.13, 22) : Math.max(width * 0.10, 18);
 
@@ -266,19 +266,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  sponsorRow: {
-    marginTop: 1,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderWidth: 1,
-    borderColor: '#a3a3a3',
-    borderRadius: 2,
-  },
-  sponsorBrand: {
-    color: '#ffffff',
-    fontWeight: '900',
-    letterSpacing: 2.5,
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -385,17 +372,6 @@ const styles = StyleSheet.create({
   playerLastName: {
     fontWeight: '800',
     color: '#ffffff',
-  },
-  playerSubDetails: {
-    fontWeight: '700',
-    color: '#64748b',
-    marginTop: 1.5,
-  },
-  countryCode: {
-    color: '#94a3b8',
-  },
-  seedText: {
-    color: '#ccff00', // Highlighted seed index
   },
   rowTrophy: {
     marginRight: 8,

@@ -9,29 +9,8 @@ if (!fs.existsSync(srcDir)) {
   process.exit(0);
 }
 
-if (!fs.existsSync(destDir)) {
-  fs.mkdirSync(destDir, { recursive: true });
-}
-
-function copyFolderSync(from, to) {
-  if (!fs.existsSync(to)) {
-    fs.mkdirSync(to, { recursive: true });
-  }
-  fs.readdirSync(from).forEach((element) => {
-    const fromPath = path.join(from, element);
-    const toPath = path.join(to, element);
-    const stat = fs.lstatSync(fromPath);
-    if (stat.isFile()) {
-      fs.copyFileSync(fromPath, toPath);
-      console.log(`Copied file: ${element}`);
-    } else if (stat.isDirectory()) {
-      copyFolderSync(fromPath, toPath);
-    }
-  });
-}
-
 try {
-  copyFolderSync(srcDir, destDir);
+  fs.cpSync(srcDir, destDir, { recursive: true });
   console.log('Successfully copied PWA public files to dist.');
 
   // Inject AdSense script tag statically in index.html for site verification

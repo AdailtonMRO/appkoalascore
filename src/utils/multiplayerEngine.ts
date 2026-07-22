@@ -46,13 +46,17 @@ export function createInitialSession(
   bestOfGames: 3 | 5
 ): MultiplayerSessionState {
   const players: MultiplayerPlayer[] = playerNames.map(name => ({
-    id: Math.random().toString(36).substr(2, 9),
+    id: Math.random().toString(36).slice(2, 11),
     name,
     totalWins: 0,
   }));
 
   // Perform initial random draw
-  const shuffledIds = [...players].map(p => p.id).sort(() => Math.random() - 0.5);
+  const shuffledIds = [...players].map(p => p.id);
+  for (let i = shuffledIds.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffledIds[i], shuffledIds[j]] = [shuffledIds[j], shuffledIds[i]];
+  }
 
   const teamSize = mode === 'singles' ? 1 : 2;
   const initialTeam1Ids = shuffledIds.splice(0, teamSize);
@@ -290,7 +294,7 @@ export function addPlayerToSession(
   const newState = { ...state, history };
 
   const newPlayer: MultiplayerPlayer = {
-    id: Math.random().toString(36).substr(2, 9),
+    id: Math.random().toString(36).slice(2, 11),
     name,
     totalWins: 0,
   };

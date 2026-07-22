@@ -29,74 +29,86 @@ interface LoginScreenProps {
   language: 'pt' | 'en' | 'es';
 }
 
+const TEXTS = {
+  pt: {
+    login: 'Entrar',
+    register: 'Cadastrar',
+    email: 'E-mail',
+    password: 'Senha',
+    back: 'Voltar',
+    forgot: 'Esqueceu a senha?',
+    createAccount: 'Não tem uma conta? Cadastre-se',
+    haveAccount: 'Já tem uma conta? Entre',
+    sendReset: 'Enviar E-mail de Recuperação',
+    error: 'Erro',
+    success: 'Sucesso',
+    emailRequired: 'Preencha o e-mail.',
+    passRequired: 'Preencha a senha.',
+    resetSent: 'Instruções de recuperação enviadas para o seu e-mail.',
+    registerSuccess: 'Conta criada com sucesso! Verifique seu e-mail para confirmação se necessário.',
+    orEnterWith: 'Ou continue com',
+    google: 'Google',
+    apple: 'Apple',
+  },
+  en: {
+    login: 'Sign In',
+    register: 'Sign Up',
+    email: 'Email',
+    password: 'Password',
+    back: 'Back',
+    forgot: 'Forgot Password?',
+    createAccount: "Don't have an account? Sign Up",
+    haveAccount: 'Already have an account? Sign In',
+    sendReset: 'Send Recovery Email',
+    error: 'Error',
+    success: 'Success',
+    emailRequired: 'Please enter your email.',
+    passRequired: 'Please enter your password.',
+    resetSent: 'Recovery instructions sent to your email.',
+    registerSuccess: 'Account created successfully! Check your email for verification if needed.',
+    orEnterWith: 'Or continue with',
+    google: 'Google',
+    apple: 'Apple',
+  },
+  es: {
+    login: 'Iniciar Sesión',
+    register: 'Registrarse',
+    email: 'Correo electrónico',
+    password: 'Contraseña',
+    back: 'Volver',
+    forgot: '¿Olvidaste tu contraseña?',
+    createAccount: '¿No tienes una cuenta? Regístrate',
+    haveAccount: '¿Ya tienes una conta? Inicia sesión',
+    sendReset: 'Enviar Correo de Recuperación',
+    error: 'Error',
+    success: 'Éxito',
+    emailRequired: 'Por favor ingrese su correo.',
+    passRequired: 'Por favor ingrese su contraseña.',
+    resetSent: 'Instrucciones de recuperación enviadas a su correo.',
+    registerSuccess: '¡Cuenta creada con éxito! Revise su correo para confirmar si es necesario.',
+    orEnterWith: 'O continuar con',
+    google: 'Google',
+    apple: 'Apple',
+  },
+};
+
+const getAuthErrorMessage = (error: any, language: 'pt' | 'en' | 'es'): string => {
+  const code = error?.code || '';
+  if (code === 'auth/invalid-email') return language === 'en' ? 'Invalid email address.' : language === 'es' ? 'Correo electrónico no válido.' : 'Endereço de e-mail inválido.';
+  if (code === 'auth/user-not-found' || code === 'auth/invalid-credential') return language === 'en' ? 'Incorrect email or password.' : language === 'es' ? 'Correo o contraseña incorrectos.' : 'E-mail ou senha incorretos.';
+  if (code === 'auth/wrong-password') return language === 'en' ? 'Incorrect password.' : language === 'es' ? 'Contraseña incorrecta.' : 'Senha incorreta.';
+  if (code === 'auth/email-already-in-use') return language === 'en' ? 'Email already in use.' : language === 'es' ? 'El correo ya está en uso.' : 'Este e-mail já está em uso.';
+  if (code === 'auth/weak-password') return language === 'en' ? 'Weak password.' : language === 'es' ? 'Contraseña débil.' : 'A senha é muito fraca.';
+  return language === 'en' ? 'An unexpected error occurred.' : language === 'es' ? 'Ocurrió un error inesperado.' : 'Ocorreu um erro inesperado.';
+};
+
 export default function LoginScreen({ onClose, onLoginSuccess, language }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
 
-  const texts = {
-    pt: {
-      login: 'Entrar',
-      register: 'Cadastrar',
-      email: 'E-mail',
-      password: 'Senha',
-      back: 'Voltar',
-      forgot: 'Esqueceu a senha?',
-      createAccount: 'Não tem uma conta? Cadastre-se',
-      haveAccount: 'Já tem uma conta? Entre',
-      sendReset: 'Enviar E-mail de Recuperação',
-      error: 'Erro',
-      success: 'Sucesso',
-      emailRequired: 'Preencha o e-mail.',
-      passRequired: 'Preencha a senha.',
-      resetSent: 'Instruções de recuperação enviadas para o seu e-mail.',
-      registerSuccess: 'Conta criada com sucesso! Verifique seu e-mail para confirmação se necessário.',
-      orEnterWith: 'Ou continue com',
-      google: 'Google',
-      apple: 'Apple',
-    },
-    en: {
-      login: 'Sign In',
-      register: 'Sign Up',
-      email: 'Email',
-      password: 'Password',
-      back: 'Back',
-      forgot: 'Forgot Password?',
-      createAccount: "Don't have an account? Sign Up",
-      haveAccount: 'Already have an account? Sign In',
-      sendReset: 'Send Recovery Email',
-      error: 'Error',
-      success: 'Success',
-      emailRequired: 'Please enter your email.',
-      passRequired: 'Please enter your password.',
-      resetSent: 'Recovery instructions sent to your email.',
-      registerSuccess: 'Account created successfully! Check your email for verification if needed.',
-      orEnterWith: 'Or continue with',
-      google: 'Google',
-      apple: 'Apple',
-    },
-    es: {
-      login: 'Iniciar Sesión',
-      register: 'Registrarse',
-      email: 'Correo electrónico',
-      password: 'Contraseña',
-      back: 'Volver',
-      forgot: '¿Olvidaste tu contraseña?',
-      createAccount: '¿No tienes una cuenta? Regístrate',
-      haveAccount: '¿Ya tienes una conta? Inicia sesión',
-      sendReset: 'Enviar Correo de Recuperación',
-      error: 'Error',
-      success: 'Éxito',
-      emailRequired: 'Por favor ingrese su correo.',
-      passRequired: 'Por favor ingrese su contraseña.',
-      resetSent: 'Instrucciones de recuperación enviadas a su correo.',
-      registerSuccess: '¡Cuenta creada con éxito! Revise su correo para confirmar si es necesario.',
-      orEnterWith: 'O continuar con',
-      google: 'Google',
-      apple: 'Apple',
-    },
-  }[language || 'pt'];
+  const texts = TEXTS[language] || TEXTS.pt;
 
   const handleGoogleLogin = async () => {
     console.log('Google login button clicked.');
@@ -105,7 +117,6 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       if (Platform.OS === 'web') {
         console.log('Running on web. Initializing GoogleAuthProvider...');
         const provider = new GoogleAuthProvider();
-        console.log('Calling signInWithPopup with:', { auth, provider });
         const userCredential = await signInWithPopup(auth, provider);
         console.log('signInWithPopup resolved:', userCredential);
         if (userCredential.user) {
@@ -127,7 +138,7 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       }
     } catch (error: any) {
       console.error('Error during Google login:', error);
-      Alert.alert(texts.error, error.message || 'Erro no login com Google.');
+      Alert.alert(texts.error, getAuthErrorMessage(error, language));
     } finally {
       setLoading(false);
     }
@@ -140,7 +151,6 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       if (Platform.OS === 'web') {
         console.log('Running on web. Initializing Apple OAuthProvider...');
         const provider = new OAuthProvider('apple.com');
-        console.log('Calling signInWithPopup...');
         const userCredential = await signInWithPopup(auth, provider);
         console.log('signInWithPopup resolved:', userCredential);
         if (userCredential.user) {
@@ -162,7 +172,7 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
       }
     } catch (error: any) {
       console.error('Error during Apple login:', error);
-      Alert.alert(texts.error, error.message || 'Erro no login com Apple.');
+      Alert.alert(texts.error, getAuthErrorMessage(error, language));
     } finally {
       setLoading(false);
     }
@@ -216,7 +226,7 @@ export default function LoginScreen({ onClose, onLoginSuccess, language }: Login
         setMode('login');
       }
     } catch (error: any) {
-      Alert.alert(texts.error, error.message || 'Erro inesperado.');
+      Alert.alert(texts.error, getAuthErrorMessage(error, language));
     } finally {
       setLoading(false);
     }

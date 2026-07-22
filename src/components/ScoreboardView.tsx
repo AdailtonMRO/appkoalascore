@@ -8,7 +8,6 @@ import {
   useWindowDimensions,
   Alert,
   TextInput,
-  Modal,
   StatusBar,
   Vibration,
   Animated,
@@ -30,8 +29,6 @@ interface ScoreboardViewProps {
   onToggleMute: () => void;
   onToggleSide: () => void; // Callback to toggle ends manually
   physicalMappings: Record<string, string>;
-  onRetireMatch: (player: 1 | 2, reason: 'injury' | 'forfeit') => void;
-  onAbandonMatch: (reason: 'weather' | 'power_outage' | 'court_issue' | 'other') => void;
 }
 
 export default function ScoreboardView({
@@ -43,8 +40,6 @@ export default function ScoreboardView({
   onToggleMute,
   onToggleSide,
   physicalMappings,
-  onRetireMatch,
-  onAbandonMatch,
 }: ScoreboardViewProps) {
   const { config, player1Sets, player2Sets, setScores, currentSetIndex, isTieBreak, isMatchTieBreak, server, winner } = matchState;
   const { width, height } = useWindowDimensions();
@@ -60,7 +55,6 @@ export default function ScoreboardView({
   // Interval Timer states
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerTotal, setTimerTotal] = useState(60);
   const [timerType, setTimerType] = useState<'side' | 'set' | null>(null);
 
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -135,6 +129,12 @@ export default function ScoreboardView({
       playBeep(0, 0.15, 880);
       playBeep(0.2, 0.15, 880);
       playBeep(0.4, 0.35, 987);
+
+      setTimeout(() => {
+        if (ctx.state !== 'closed') {
+          ctx.close().catch(console.warn);
+        }
+      }, 1000);
     } catch (e) {
       console.warn('Web Audio error:', e);
     }
@@ -179,7 +179,6 @@ export default function ScoreboardView({
     }
     const duration = type === 'side' ? 60 : 120;
     setTimerSeconds(duration);
-    setTimerTotal(duration);
     setTimerType(type);
     setShowTimerModal(true);
 
@@ -1023,53 +1022,7 @@ export default function ScoreboardView({
               ]}
               onPress={async () => {
                 if (isSaved) return;
-                 const matchData = {
-                   type: 'classic' as const,
-                   player1Name: config.player1Name,
-                   player2Name: config.player2Name,
-                   setScores: setScores.map(s => ({
-                     player1Games: s.player1Games,
-                     player2Games: s.player2Games,
-                     player1TieBreakPoints: s.player1TieBreakPoints,
-                     player2TieBreakPoints: s.player2TieBreakPoints,
-                   })),
-                   winner,
-                   setsToWin: config.setsToWin,
-                   pointsHistory: matchState.pointsHistory || [],
-                   stats: calculateMatchStats(matchState.pointsHistory || []),
-                   totalDuration: formatElapsed(elapsedSeconds),
-                   gameDurations: gameDurations.map(d => formatElapsed(d)),
-                   terminationType: matchState.terminationType || 'completed',
-                   retiredPlayer: matchState.retiredPlayer,
-                   retirementReason: matchState.retirementReason,
-                   abandonmentReason: matchState.abandonmentReason,
-                   rawState: matchState,
-                 };
-                 const success = await historyService.saveMatch(matchData);
-                  if (success) {
-                    if (matchState.resumedMatchId) {
-                      await historyService.deleteMatch(matchState.resumedMatchId);
-                    }
-                    setIsSaved(true);
-                    const successMsg = config.language === 'pt' ? 'Partida salva com sucesso!' : config.language === 'en' ? 'Match saved successfully!' : '¡Partido guardado com êxito!';
-                    if (Platform.OS === 'web') {
-                      window.alert(successMsg);
-                    } else {
-                      Alert.alert(
-                        config.language === 'pt' ? 'Sucesso' : config.language === 'en' ? 'Success' : 'Éxito',
-                        successMsg
-                      );
-                    }
-                  } else {
-                    const failMsg = config.language === 'pt' 
-                      ? 'Erro ao salvar partida no Firebase. Verifique suas regras do Firestore.' 
-                      : 'Error saving match to Firebase. Check your Firestore rules.';
-                    if (Platform.OS === 'web') {
-                      window.alert(failMsg);
-                    } else {
-                      Alert.alert('Error', failMsg);
-                    }
-                  }
+                await saveAndExit(winner, matchState.terminationType || 'completed');
               }}
               disabled={isSaved}
             >
@@ -1696,12 +1649,7 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
   },
-  servingTagText: {
-    fontSize: 9,
-    fontWeight: '900',
-    color: '#fff',
-    letterSpacing: 0.5,
-  },
+
   playerDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',

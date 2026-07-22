@@ -77,7 +77,6 @@ export default function App() {
           },
         };
         setSession(currentSession);
-        setUserTier('pro');
         historyService.syncLocalHistoryWithCloud();
         fetchUserData(user.uid);
       } else {
@@ -211,6 +210,12 @@ export default function App() {
         }
       `;
       document.head.appendChild(style);
+
+      return () => {
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
+      };
     }
   }, []);
 
@@ -293,7 +298,7 @@ export default function App() {
 
   // Track BLE connection state and initialize AdMob SDK
   useEffect(() => {
-    bleService.onConnectionState((state) => {
+    const unsubscribe = bleService.onConnectionState((state) => {
       setConnectionState(state);
     });
 
@@ -305,6 +310,10 @@ export default function App() {
       .catch((err) => {
         console.warn('AdMob SDK Initialization failed:', err);
       });
+
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   // Handler to add a point
@@ -444,11 +453,6 @@ export default function App() {
 
   // Register BLE event listener once
   useEffect(() => {
-    // Legacy support
-    bleService.onPointTriggered((player) => {
-      handleAddPointRef.current(player);
-    });
-
     // Custom button mapping handler
     bleService.onButtonPress((buttonId) => {
       const currentMappings = buttonMappingsRef.current;
@@ -604,8 +608,6 @@ export default function App() {
           onToggleMute={handleToggleMute}
           onToggleSide={handleToggleSide}
           physicalMappings={physicalMappings}
-          onRetireMatch={handleRetireMatch}
-          onAbandonMatch={handleAbandonMatch}
         />
       )}
 

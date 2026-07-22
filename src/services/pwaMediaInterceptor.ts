@@ -4,6 +4,10 @@ import { DeviceEventEmitter } from 'react-native';
 const SILENT_AUDIO_BASE64 = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAAAG';
 let silentAudio: any = null;
 
+function playSilentAudio() {
+  if (silentAudio) silentAudio.play().catch(() => {});
+}
+
 export function initializePWAMediaSession() {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') return;
 
@@ -36,13 +40,13 @@ export function initializePWAMediaSession() {
 
       navigator.mediaSession.setActionHandler('play', () => {
         DeviceEventEmitter.emit('BluetoothMediaKey', 'media_play');
-        if (silentAudio) silentAudio.play().catch(() => {});
+        playSilentAudio();
       });
 
       navigator.mediaSession.setActionHandler('pause', () => {
         DeviceEventEmitter.emit('BluetoothMediaKey', 'media_pause');
         // Resume silent play immediately to maintain media focus and keep listening for buttons
-        if (silentAudio) silentAudio.play().catch(() => {});
+        playSilentAudio();
       });
 
       navigator.mediaSession.setActionHandler('nexttrack', () => {
@@ -56,9 +60,7 @@ export function initializePWAMediaSession() {
       try {
         navigator.mediaSession.setActionHandler('toggleplaypause' as any, () => {
           DeviceEventEmitter.emit('BluetoothMediaKey', 'media_togglePlayPause');
-          if (silentAudio) {
-            silentAudio.play().catch(() => {});
-          }
+          playSilentAudio();
         });
       } catch (err) {
         console.warn('Browser does not support toggleplaypause media action:', err);

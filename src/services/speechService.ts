@@ -3,6 +3,12 @@ import { MatchState, getScoreSpeechAnnouncement } from '../utils/tennisEngine';
 
 let isSpeechEnabled = true;
 
+const langCodes: Record<string, string> = {
+  pt: 'pt-BR',
+  en: 'en-US',
+  es: 'es-ES',
+};
+
 export const SpeechService = {
   setSpeechEnabled(enabled: boolean) {
     isSpeechEnabled = enabled;
@@ -18,12 +24,6 @@ export const SpeechService = {
     try {
       // Stop any ongoing speech before speaking
       await Speech.stop();
-      
-      const langCodes = {
-        pt: 'pt-BR',
-        en: 'en-US',
-        es: 'es-ES',
-      };
 
       Speech.speak(text, {
         language: langCodes[lang] || 'pt-BR',

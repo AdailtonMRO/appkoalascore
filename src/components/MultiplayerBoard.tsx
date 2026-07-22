@@ -33,6 +33,87 @@ interface MultiplayerBoardProps {
   physicalMappings: Record<string, string>;
 }
 
+const LABELS = {
+  pt: {
+    consecutiveWins: (count: number) => `🔥 ${count} vitórias seguidas`,
+    queueTitle: 'Fila de Espera',
+    queueEmpty: 'Nenhum jogador na fila.',
+    addPlayerTitle: 'Entrar no Treino (Atrasado)',
+    addPlaceholder: 'Nome do jogador',
+    addBtn: 'Cadastrar',
+    undo: 'Desfazer',
+    finish: 'Finalizar Treino',
+    quit: 'Sair',
+    bestOf3: 'Melhor de 3 games',
+    bestOf5: 'Melhor de 5 games',
+    warning: 'Aviso',
+    playerExists: 'Jogador já cadastrado.',
+    removeConfirmTitle: 'Remover Jogador',
+    removeConfirmMsg: (name: string) => `Deseja remover ${name} do treino e da fila?`,
+    cancel: 'Cancelar',
+    remove: 'Remover',
+    skip: 'Pular',
+    exitTitle: 'Sair do Treino',
+    exitMsg: 'Deseja salvar a classificação deste treino no Histórico ou apenas sair?',
+    exitWithoutSaving: 'Sair sem Salvar',
+    saveAndExit: 'Salvar e Sair',
+    serving: 'Saque',
+    goldPoint: 'PONTO DE OURO',
+  },
+  en: {
+    consecutiveWins: (count: number) => `🔥 ${count} wins in a row`,
+    queueTitle: 'Waiting List',
+    queueEmpty: 'No players in queue.',
+    addPlayerTitle: 'Join Match (Late Arrival)',
+    addPlaceholder: 'Player name',
+    addBtn: 'Register',
+    undo: 'Undo',
+    finish: 'Finish Session',
+    quit: 'Exit',
+    bestOf3: 'Best of 3 games',
+    bestOf5: 'Best of 5 games',
+    warning: 'Warning',
+    playerExists: 'Player already registered.',
+    removeConfirmTitle: 'Remove Player',
+    removeConfirmMsg: (name: string) => `Do you want to remove ${name} from the training and queue?`,
+    cancel: 'Cancel',
+    remove: 'Remove',
+    skip: 'Skip',
+    exitTitle: 'Exit Training',
+    exitMsg: 'Do you want to save the standings of this session to History or just exit?',
+    exitWithoutSaving: 'Exit without Saving',
+    saveAndExit: 'Save and Exit',
+    serving: 'Serve',
+    goldPoint: 'GOLDEN POINT',
+  },
+  es: {
+    consecutiveWins: (count: number) => `🔥 ${count} victorias seguidas`,
+    queueTitle: 'Fila de Espera',
+    queueEmpty: 'Ningún jugador en la fila.',
+    addPlayerTitle: 'Entrar al Juego (Tardío)',
+    addPlaceholder: 'Nombre del jugador',
+    addBtn: 'Registrar',
+    undo: 'Deshacer',
+    finish: 'Finalizar',
+    quit: 'Salir',
+    bestOf3: 'Mejor de 3 games',
+    bestOf5: 'Mejor de 5 games',
+    warning: 'Aviso',
+    playerExists: 'Jugador ya registrado.',
+    removeConfirmTitle: 'Remover Jugador',
+    removeConfirmMsg: (name: string) => `¿Desea remover a ${name} del juego y de la fila?`,
+    cancel: 'Cancelar',
+    remove: 'Remover',
+    skip: 'Saltar',
+    exitTitle: 'Salir del Entrenamiento',
+    exitMsg: '¿Desea guardar la clasificación de este entrenamiento en el Historial o solo salir?',
+    exitWithoutSaving: 'Salir sin Guardar',
+    saveAndExit: 'Guardar y Salir',
+    serving: 'Saque',
+    goldPoint: 'PUNTO DE ORO',
+  }
+};
+
 export default function MultiplayerBoard({
   sessionState: initialSessionState,
   onFinish,
@@ -45,6 +126,9 @@ export default function MultiplayerBoard({
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
   const [isFullscreenWeb, setIsFullscreenWeb] = useState(false);
+
+  const t = LABELS[language] || LABELS.pt;
+  const scoreFontSize = isLandscape ? Math.min(height * 0.58, 220) : 90;
 
   // Lock to landscape and hide status bar on mount, restore on unmount
   useEffect(() => {
@@ -203,7 +287,6 @@ export default function MultiplayerBoard({
       const { pageX, pageY } = e.nativeEvent;
       const dx = pageX - start.x;
       const dy = pageY - start.y;
-      const dt = Date.now() - start.time;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
       if (dist > 35) {
@@ -437,90 +520,6 @@ export default function MultiplayerBoard({
   const team1Names = state.team1?.players.map(p => p.name).join(' / ') || '';
   const team2Names = state.team2?.players.map(p => p.name).join(' / ') || '';
 
-  const labels = {
-    pt: {
-      consecutiveWins: (count: number) => `🔥 ${count} vitórias seguidas`,
-      queueTitle: 'Fila de Espera',
-      queueEmpty: 'Nenhum jogador na fila.',
-      addPlayerTitle: 'Entrar no Treino (Atrasado)',
-      addPlaceholder: 'Nome do jogador',
-      addBtn: 'Cadastrar',
-      undo: 'Desfazer',
-      finish: 'Finalizar Treino',
-      quit: 'Sair',
-      bestOf3: 'Melhor de 3 games',
-      bestOf5: 'Melhor de 5 games',
-      warning: 'Aviso',
-      playerExists: 'Jogador já cadastrado.',
-      removeConfirmTitle: 'Remover Jogador',
-      removeConfirmMsg: (name: string) => `Deseja remover ${name} do treino e da fila?`,
-      cancel: 'Cancelar',
-      remove: 'Remover',
-      skip: 'Pular',
-      exitTitle: 'Sair do Treino',
-      exitMsg: 'Deseja salvar a classificação deste treino no Histórico ou apenas sair?',
-      exitWithoutSaving: 'Sair sem Salvar',
-      saveAndExit: 'Salvar e Sair',
-      serving: 'Saque',
-      goldPoint: 'PONTO DE OURO',
-    },
-    en: {
-      consecutiveWins: (count: number) => `🔥 ${count} wins in a row`,
-      queueTitle: 'Waiting List',
-      queueEmpty: 'No players in queue.',
-      addPlayerTitle: 'Join Match (Late Arrival)',
-      addPlaceholder: 'Player name',
-      addBtn: 'Register',
-      undo: 'Undo',
-      finish: 'Finish Session',
-      quit: 'Exit',
-      bestOf3: 'Best of 3 games',
-      bestOf5: 'Best of 5 games',
-      warning: 'Warning',
-      playerExists: 'Player already registered.',
-      removeConfirmTitle: 'Remove Player',
-      removeConfirmMsg: (name: string) => `Do you want to remove ${name} from the training and queue?`,
-      cancel: 'Cancel',
-      remove: 'Remove',
-      skip: 'Skip',
-      exitTitle: 'Exit Training',
-      exitMsg: 'Do you want to save the standings of this session to History or just exit?',
-      exitWithoutSaving: 'Exit without Saving',
-      saveAndExit: 'Save and Exit',
-      serving: 'Serve',
-      goldPoint: 'GOLDEN POINT',
-    },
-    es: {
-      consecutiveWins: (count: number) => `🔥 ${count} victorias seguidas`,
-      queueTitle: 'Fila de Espera',
-      queueEmpty: 'Ningún jugador en la fila.',
-      addPlayerTitle: 'Entrar al Juego (Tardío)',
-      addPlaceholder: 'Nombre del jugador',
-      addBtn: 'Registrar',
-      undo: 'Deshacer',
-      finish: 'Finalizar',
-      quit: 'Salir',
-      bestOf3: 'Mejor de 3 games',
-      bestOf5: 'Mejor de 5 games',
-      warning: 'Aviso',
-      playerExists: 'Jugador ya registrado.',
-      removeConfirmTitle: 'Remover Jugador',
-      removeConfirmMsg: (name: string) => `¿Desea remover a ${name} del juego y de la fila?`,
-      cancel: 'Cancelar',
-      remove: 'Remover',
-      skip: 'Saltar',
-      exitTitle: 'Salir del Entrenamiento',
-      exitMsg: '¿Desea guardar la clasificación de este entrenamiento en el Historial o solo salir?',
-      exitWithoutSaving: 'Salir sin Guardar',
-      saveAndExit: 'Guardar y Salir',
-      serving: 'Saque',
-      goldPoint: 'PUNTO DE ORO',
-    }
-  };
-
-  const t = labels[language] || labels.pt;
-
-  const scoreFontSize = isLandscape ? Math.min(height * 0.58, 220) : 90;
 
   return (
     <View 

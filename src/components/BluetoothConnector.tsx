@@ -11,6 +11,7 @@ import {
   TextInput,
   DeviceEventEmitter,
   Platform,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { bleService, BleDevice, BleConnectionState } from '../services/bleService';
@@ -32,6 +33,90 @@ interface BluetoothConnectorProps {
   userTier: 'free' | 'pro';
   onNavigateToLogin: () => void;
 }
+
+const PHYSICAL_ACTIONS = [
+  { id: 'addPointLeft', namePt: 'Ponto da Esquerda', nameEn: 'Left Side Point', nameEs: 'Punto de la Izquierda' },
+  { id: 'addPointRight', namePt: 'Ponto da Direita', nameEn: 'Right Side Point', nameEs: 'Punto de la Derecha' },
+  { id: 'undo', namePt: 'Desfazer Placar (Undo)', nameEn: 'Undo Score', nameEs: 'Deshacer Marcador' },
+  { id: 'announceScore', namePt: 'Falar Placar Atual', nameEn: 'Speak Score', nameEs: 'Cantar Marcador' },
+  { id: 'toggleSide', namePt: 'Inverter Lado (Quadra)', nameEn: 'Swap Ends (Court)', nameEs: 'Cambiar Lado' },
+  { id: 'toggleMute', namePt: 'Silenciar / Ativar Voz', nameEn: 'Mute / Unmute Voice', nameEs: 'Silenciar / Activar Voz' },
+];
+
+const localization: Record<string, any> = {
+  pt: {
+    sectionTitle: 'DISPOSITIVO REMOTO / SMARTWATCH',
+    statusLabel: 'Status da Conexão:',
+    disconnected: 'Desconectar',
+    scanningStatus: 'Buscando Dispositivos...',
+    connecting: 'Conectando...',
+    connected: 'Conectado',
+    activeDevice: 'Dispositivo Ativo:',
+    virtualBtn: 'Botão Virtual',
+    scanBtn: 'Buscar Controle / Relógio',
+    stopScanBtn: 'Parar Busca',
+    disconnect: 'Desconectar',
+    connect: 'Conectar',
+    unknown: 'Dispositivo sem Nome',
+    adTitle: 'Adquirir Controle Bluetooth',
+    adDesc: 'Compre no AliExpress o modelo recomendado de controle de dedo compatível com o app.',
+    voiceTitle: 'Feedback por Voz',
+    voiceMuted: 'Voz Silenciada (Mudo)',
+    voiceActive: 'Voz Ativada',
+    closeBtn: 'Fechar',
+    action_toggleMute: 'Silenciar / Ativar Voz',
+    action_announceScore: 'Falar Placar Atual',
+    action_toggleSide: 'Inverter Lado (Quadra)',
+  },
+  en: {
+    sectionTitle: 'REMOTE DEVICE / SMARTWATCH',
+    statusLabel: 'Connection Status:',
+    disconnected: 'Disconnected',
+    scanningStatus: 'Scanning Devices...',
+    connecting: 'Connecting...',
+    connected: 'Connected',
+    activeDevice: 'Active Device:',
+    virtualBtn: 'Virtual Button',
+    scanBtn: 'Scan Control / Watch',
+    stopScanBtn: 'Stop Scan',
+    disconnect: 'Disconnect',
+    connect: 'Connect',
+    unknown: 'Unnamed Device',
+    adTitle: 'Buy Bluetooth Button',
+    adDesc: 'Get the recommended bluetooth finger remote control on AliExpress.',
+    voiceTitle: 'Voice Feedback',
+    voiceMuted: 'Voice Muted',
+    voiceActive: 'Voice Active',
+    closeBtn: 'Close',
+    action_toggleMute: 'Mute / Unmute Voice',
+    action_announceScore: 'Announce Score',
+    action_toggleSide: 'Swap Ends (Court)',
+  },
+  es: {
+    sectionTitle: 'DISPOSITIVO REMOTO / SMARTWATCH',
+    statusLabel: 'Estado de Conexión:',
+    disconnected: 'Desconectado',
+    scanningStatus: 'Buscando Dispositivos...',
+    connecting: 'Conectando...',
+    connected: 'Conectado',
+    activeDevice: 'Dispositivo Activo:',
+    virtualBtn: 'Botón Virtual',
+    scanBtn: 'Buscar Control / Reloj',
+    stopScanBtn: 'Parar Búsqueda',
+    disconnect: 'Desconectar',
+    connect: 'Conectar',
+    unknown: 'Dispositivo sem Nome',
+    adTitle: 'Comprar Botón Bluetooth',
+    adDesc: 'Compra el control remoto bluetooth de dedo recomendado en AliExpress.',
+    voiceTitle: 'Feedback de Voz',
+    voiceMuted: 'Voz Silenciada (Mudo)',
+    voiceActive: 'Voz Activada',
+    closeBtn: 'Cerrar',
+    action_toggleMute: 'Silenciar / Activar Voz',
+    action_announceScore: 'Anunciar Marcador',
+    action_toggleSide: 'Cambiar Lado (Cancha)',
+  },
+};
 
 export default function BluetoothConnector({
   player1Name,
@@ -55,41 +140,6 @@ export default function BluetoothConnector({
   const [isScanning, setIsScanning] = useState(false);
   const [connectedDeviceId, setConnectedDeviceId] = useState<string | null>(null);
   
-  // Modal State for Mapping Selector
-  const [editingBtnId, setEditingBtnId] = useState<string | null>(null);
-
-  // Modal State for Remote Input Diagnostic Test
-  const [showDiagnosticModal, setShowDiagnosticModal] = useState(false);
-  const [diagnosticLogs, setDiagnosticLogs] = useState<
-    Array<{ id: string; type: 'key' | 'touch' | 'gesture'; detail: string; timestamp: string }>
-  >([]);
-
-  const textInputRef = useRef<TextInput | null>(null);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-
-  const addDiagnosticLog = (type: 'key' | 'touch' | 'gesture', detail: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const id = Math.random().toString(36).substring(2, 9);
-    setDiagnosticLogs((prev) => [{ id, type, detail, timestamp }, ...prev].slice(0, 50));
-  };
-
-  const clearDiagnosticLogs = () => {
-    setDiagnosticLogs([]);
-  };
-
-  // Auto-focus TextInput for capturing keystrokes
-  useEffect(() => {
-    if (showDiagnosticModal) {
-      const focusInput = () => {
-        textInputRef.current?.focus();
-      };
-      
-      focusInput();
-      const interval = setInterval(focusInput, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [showDiagnosticModal]);
-
   // Recording State variables
   const [recordingAction, setRecordingAction] = useState<string | null>(null);
   const recordInputRef = useRef<TextInput | null>(null);
@@ -191,160 +241,7 @@ export default function BluetoothConnector({
     return list.length > 0 ? list.join(', ') : (language === 'pt' ? 'Nenhum' : language === 'es' ? 'Ninguno' : 'None');
   };
 
-  const PHYSICAL_ACTIONS = [
-    { id: 'addPointLeft', namePt: `Ponto da Esquerda (${player1Name})`, nameEn: `Left Side Point (${player1Name})`, nameEs: `Punto de la Izquierda (${player1Name})` },
-    { id: 'addPointRight', namePt: `Ponto da Direita (${player2Name})`, nameEn: `Right Side Point (${player2Name})`, nameEs: `Punto de la Derecha (${player2Name})` },
-    { id: 'undo', namePt: 'Desfazer Placar (Undo)', nameEn: 'Undo Score', nameEs: 'Deshacer Marcador' },
-    { id: 'announceScore', namePt: 'Falar Placar Atual', nameEn: 'Speak Score', nameEs: 'Cantar Marcador' },
-    { id: 'toggleSide', namePt: 'Inverter Lado (Quadra)', nameEn: 'Swap Ends (Court)', nameEs: 'Cambiar Lado' },
-    { id: 'toggleMute', namePt: 'Silenciar / Ativar Voz', nameEn: 'Mute / Unmute Voice', nameEs: 'Silenciar / Activar Voz' },
-  ];
-
-  // Localization Dictionary
-  const localization = {
-    pt: {
-      sectionTitle: 'DISPOSITIVO REMOTO / SMARTWATCH',
-      statusLabel: 'Status da Conexão:',
-      disconnected: 'Desconectar',
-      scanningStatus: 'Buscando Dispositivos...',
-      connecting: 'Conectando...',
-      connected: 'Conectado',
-      activeDevice: 'Dispositivo Ativo:',
-      virtualBtn: 'Botão Virtual',
-      scanBtn: 'Buscar Controle / Relógio',
-      stopScanBtn: 'Parar Busca',
-      disconnect: 'Desconectar',
-      connect: 'Conectar',
-      simTitle: 'Simulador do Controle (9 Botões)',
-      simDesc: 'Clique nos botões abaixo para testar as ações configuradas no seu controle remoto Bluetooth de 9 botões.',
-      simError: ' * Conecte a um dispositivo (ou simulador) para testar os botões.',
-      unknown: 'Dispositivo sem Nome',
-      adTitle: 'Adquirir Controle Bluetooth',
-      adDesc: 'Compre no AliExpress o modelo recomendado de controle de dedo compatível com o app.',
-      voiceTitle: 'Feedback por Voz',
-      voiceMuted: 'Voz Silenciada (Mudo)',
-      voiceActive: 'Voz Ativada',
-      configTitle: 'Mapeamento do Controle',
-      configDesc: 'Configure a função de cada um dos 9 botões do seu controle remoto Bluetooth.',
-      selectActionTitle: 'Selecionar Ação para o Botão',
-      closeBtn: 'Fechar',
-      btnLabel: (id: string) => `Botão ${id}`,
-      action_addPointP1: `Ponto para ${player1Name}`,
-      action_addPointP2: `Ponto para ${player2Name}`,
-      action_undo: 'Desfazer Ponto',
-      action_reset: 'Reiniciar Partida',
-      action_toggleMute: 'Silenciar / Ativar Voz',
-      action_announceScore: 'Falar Placar Atual',
-      action_toggleSide: 'Inverter Lado (Quadra)',
-      action_none: 'Nenhuma Ação',
-      diagTitle: 'Diagnóstico de Controle Físico',
-      diagDesc: 'Se o seu controle remoto (ex: Beauty-R1) já está pareado nas configurações de Bluetooth do seu celular, clique abaixo para testar quais sinais cada botão envia.',
-      diagBtn: 'Iniciar Teste de Botões',
-      diagModalTitle: 'Teste de Entrada do Controle Físico',
-      diagModalInstructions: '1. Garanta que o controle está pareado no Bluetooth do celular.\n2. Pressione qualquer botão do controle.\n3. Se o controle emular teclado, as teclas aparecerão como [TECLA].\n4. Se emular mouse, aparecerão coordenadas de [TOQUE] ou [GESTO].\n5. Dica: Se o controle alterar o volume do celular, ele está enviando comandos de volume do sistema.',
-      diagLogClear: 'Limpar Histórico',
-      diagLogEmpty: 'Nenhum sinal detectado ainda. Pressione os botões do controle...',
-    },
-    en: {
-      sectionTitle: 'REMOTE DEVICE / SMARTWATCH',
-      statusLabel: 'Connection Status:',
-      disconnected: 'Disconnected',
-      scanningStatus: 'Scanning Devices...',
-      connecting: 'Connecting...',
-      connected: 'Connected',
-      activeDevice: 'Active Device:',
-      virtualBtn: 'Virtual Button',
-      scanBtn: 'Scan Control / Watch',
-      stopScanBtn: 'Stop Scan',
-      disconnect: 'Disconnect',
-      connect: 'Connect',
-      simTitle: 'Remote Control Simulator (9 Buttons)',
-      simDesc: 'Click the buttons below to test the actions configured on your 9-button Bluetooth remote.',
-      simError: ' * Connect to a device (or simulation) to test the buttons.',
-      unknown: 'Unnamed Device',
-      adTitle: 'Buy Bluetooth Button',
-      adDesc: 'Get the recommended bluetooth finger remote control on AliExpress.',
-      voiceTitle: 'Voice Feedback',
-      voiceMuted: 'Voice Muted',
-      voiceActive: 'Voice Active',
-      configTitle: 'Remote Mapping',
-      configDesc: 'Configure the function of each of the 9 buttons on your Bluetooth remote.',
-      selectActionTitle: 'Select Action for Button',
-      closeBtn: 'Close',
-      btnLabel: (id: string) => `Button ${id}`,
-      action_addPointP1: `Point for ${player1Name}`,
-      action_addPointP2: `Point for ${player2Name}`,
-      action_undo: 'Undo Point',
-      action_reset: 'Reset Match',
-      action_toggleMute: 'Mute / Unmute Voice',
-      action_announceScore: 'Announce Score',
-      action_toggleSide: 'Swap Ends (Court)',
-      action_none: 'No Action',
-      diagTitle: 'Physical Remote Diagnostics',
-      diagDesc: 'If your remote (e.g. Beauty-R1) is already paired in your phone\'s Bluetooth settings, click below to test what signals each button sends.',
-      diagBtn: 'Start Button Test',
-      diagModalTitle: 'Physical Remote Input Test',
-      diagModalInstructions: '1. Make sure your remote is paired in your phone\'s Bluetooth settings.\n2. Press any button on the remote.\n3. If it emulates a keyboard, keys will show up as [KEY].\n4. If it emulates a mouse, coordinates will show up as [TOUCH] or [GESTURE].\n5. Tip: If the remote changes the phone volume, it is sending system volume keys.',
-      diagLogClear: 'Clear History',
-      diagLogEmpty: 'No signals detected yet. Press the remote buttons...',
-    },
-    es: {
-      sectionTitle: 'DISPOSITIVO REMOTO / SMARTWATCH',
-      statusLabel: 'Estado de Conexión:',
-      disconnected: 'Desconectado',
-      scanningStatus: 'Buscando Dispositivos...',
-      connecting: 'Conectando...',
-      connected: 'Conectado',
-      activeDevice: 'Dispositivo Activo:',
-      virtualBtn: 'Botón Virtual',
-      scanBtn: 'Buscar Control / Reloj',
-      stopScanBtn: 'Parar Búsqueda',
-      disconnect: 'Desconectar',
-      connect: 'Conectar',
-      simTitle: 'Simulador del Control (9 Botones)',
-      simDesc: 'Haga clic en los botones para probar las acciones configuradas en su control remoto Bluetooth de 9 botones.',
-      simError: ' * Conecte a un dispositivo (ou simulador) para testar os botões.',
-      unknown: 'Dispositivo sem Nome',
-      adTitle: 'Comprar Botón Bluetooth',
-      adDesc: 'Compra el control remoto bluetooth de dedo recomendado en AliExpress.',
-      voiceTitle: 'Feedback de Voz',
-      voiceMuted: 'Voz Silenciada (Mudo)',
-      voiceActive: 'Voz Activada',
-      configTitle: 'Mapeo del Control',
-      configDesc: 'Configure la función de cada uno de los 9 botones de su control remoto Bluetooth.',
-      selectActionTitle: 'Seleccionar Acción para el Botón',
-      closeBtn: 'Cerrar',
-      btnLabel: (id: string) => `Botón ${id}`,
-      action_addPointP1: `Punto para ${player1Name}`,
-      action_addPointP2: `Punto para ${player2Name}`,
-      action_undo: 'Deshacer Punto',
-      action_reset: 'Reiniciar Partido',
-      action_toggleMute: 'Silenciar / Activar Voz',
-      action_announceScore: 'Anunciar Marcador',
-      action_toggleSide: 'Cambiar Lado (Cancha)',
-      action_none: 'Ninguna Acción',
-      diagTitle: 'Diagnóstico de Control Físico',
-      diagDesc: 'Si tu control remoto (ej. Beauty-R1) ya está emparejado en el Bluetooth de tu celular, haz clic abajo para probar qué señales envía cada botón.',
-      diagBtn: 'Iniciar Prueba de Botones',
-      diagModalTitle: 'Prueba de Entrada del Control Físico',
-      diagModalInstructions: '1. Asegúrate de que el control esté emparejado en el Bluetooth de tu celular.\n2. Presiona cualquier botón en el control.\n3. Si emula un teclado, las teclas se mostrarán como [TECLA].\n4. Si emula un mouse, las coordenadas se mostrarán como [TOQUE] o [GESTO].\n5. Consejo: Si el control cambia el volumen del teléfono, está enviando teclas de volumen del sistema.',
-      diagLogClear: 'Limpiar Historial',
-      diagLogEmpty: 'Ninguna señal detectada aún. Presiona los botones del control...',
-    },
-  };
-
   const t = localization[language] || localization.pt;
-
-  const ACTIONS_LIST = [
-    'addPointP1',
-    'addPointP2',
-    'undo',
-    'reset',
-    'toggleMute',
-    'announceScore',
-    'toggleSide',
-    'none',
-  ];
 
   // Subscribe to connection state changes
   useEffect(() => {
@@ -1045,89 +942,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.03)',
   },
-  btnBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#ccff00',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  btnBadgeText: {
-    color: '#0f172a',
-    fontSize: 11,
-    fontWeight: '800',
-  },
   btnActionText: {
     color: '#e2e8f0',
     fontSize: 12,
     fontWeight: '600',
     flex: 1,
-  },
-  simCard: {
-    backgroundColor: 'rgba(30, 41, 59, 0.4)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 16,
-  },
-  simHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  simTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#f8fafc',
-  },
-  simDesc: {
-    fontSize: 11,
-    color: '#64748b',
-    lineHeight: 15,
-    marginBottom: 12,
-  },
-  simGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  simGridBtn: {
-    width: '30%',
-    aspectRatio: 1.1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  simBtnP1: {
-    borderColor: '#06b6d4',
-    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-  },
-  simBtnP2: {
-    borderColor: '#f97316',
-    backgroundColor: 'rgba(249, 115, 22, 0.1)',
-  },
-  simGridBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#ccff00',
-  },
-  simGridBtnLabel: {
-    fontSize: 9,
-    color: '#94a3b8',
-    fontWeight: '700',
-    marginTop: 2,
-    textTransform: 'uppercase',
-  },
-  disabledBtn: {
-    opacity: 0.25,
   },
   adBanner: {
     flexDirection: 'row',
@@ -1186,29 +1005,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  actionsListScroll: {
-    marginBottom: 16,
-  },
-  actionOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  actionOptionSelected: {
-    backgroundColor: 'rgba(204, 255, 0, 0.05)',
-  },
-  actionOptionText: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  actionOptionTextSelected: {
-    color: '#ccff00',
-  },
   modalCloseBtn: {
     backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 10,
@@ -1227,14 +1023,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 1,
     opacity: 0,
-  },
-  diagCard: {
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 16,
   },
   diagHeader: {
     flexDirection: 'row',
@@ -1267,15 +1055,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0f172a',
   },
-  diagModalInstructions: {
-    fontSize: 11,
-    color: '#94a3b8',
-    lineHeight: 16,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
   testPad: {
     height: 120,
     backgroundColor: 'rgba(204, 255, 0, 0.03)',
@@ -1295,93 +1074,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 14,
-  },
-  logListHeader: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#ccff00',
-    marginBottom: 8,
-  },
-  logsScroll: {
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    borderRadius: 8,
-    padding: 8,
-    height: 180,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  emptyLogText: {
-    color: '#64748b',
-    fontSize: 11,
-    textAlign: 'center',
-    fontStyle: 'italic',
-  },
-  logItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.03)',
-  },
-  logTime: {
-    color: '#64748b',
-    fontSize: 10,
-    marginRight: 8,
-  },
-  logTypeBadge: {
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginRight: 8,
-  },
-  badge_key: {
-    backgroundColor: 'rgba(6, 182, 212, 0.2)',
-  },
-  badge_touch: {
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-  },
-  badge_gesture: {
-    backgroundColor: 'rgba(234, 179, 8, 0.2)',
-  },
-  logTypeText: {
-    fontSize: 8,
-    fontWeight: '800',
-    color: '#f8fafc',
-  },
-  logDetail: {
-    color: '#e2e8f0',
-    fontSize: 11,
-    fontWeight: '600',
-    flex: 1,
-  },
-  modalButtonRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  modalActionBtn: {
-    flex: 1,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  clearBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  clearBtnText: {
-    color: '#ef4444',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  closeBtnModal: {
-    backgroundColor: '#ccff00',
-  },
-  closeBtnTextModal: {
-    color: '#0f172a',
-    fontSize: 13,
-    fontWeight: '800',
   },
   manualTriggerBtn: {
     backgroundColor: 'rgba(255, 255, 255, 0.05)',

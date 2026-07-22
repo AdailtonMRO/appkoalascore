@@ -13,7 +13,6 @@
         "NSBluetoothAlwaysUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar.",
         "NSBluetoothPeripheralUsageDescription": "Este aplicativo precisa de acesso ao Bluetooth para conectar aos botões de controle de placar.",
         "UIBackgroundModes": [
-          "audio",
           "audio"
         ],
         "ITSAppUsesNonExemptEncryption": false

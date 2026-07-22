@@ -29,6 +29,34 @@ interface AccordionSection {
   content: React.ReactNode;
 }
 
+
+const TRANSLATIONS = {
+  pt: {
+    title: 'AJUDA & INSTRUÇÕES',
+    subtitle: 'Entenda como aproveitar o app ao máximo',
+    back: 'Voltar',
+    generalTitle: 'Uso Geral (Modo Clássico)',
+    remoteTitle: 'Controles Remotos Bluetooth',
+    multiplayerTitle: 'Modo Multiplayer (Treinos)',
+  },
+  en: {
+    title: 'HELP & INSTRUCTIONS',
+    subtitle: 'Learn how to get the most out of the app',
+    back: 'Back',
+    generalTitle: 'General Usage (Classic Mode)',
+    remoteTitle: 'Bluetooth Remote Controls',
+    multiplayerTitle: 'Multiplayer Mode (Training)',
+  },
+  es: {
+    title: 'AYUDA E INSTRUCCIONES',
+    subtitle: 'Aprende a sacar el máximo provecho de la app',
+    back: 'Volver',
+    generalTitle: 'Uso General (Modo Clásico)',
+    remoteTitle: 'Controles Remotos Bluetooth',
+    multiplayerTitle: 'Modo Multiplayer (Entrenamientos)',
+  }
+};
+
 export default function HelpScreen({ onBack, language }: HelpScreenProps) {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
@@ -37,36 +65,9 @@ export default function HelpScreen({ onBack, language }: HelpScreenProps) {
     setExpandedSection(expandedSection === id ? null : id);
   };
 
-  const translations = {
-    pt: {
-      title: 'AJUDA & INSTRUÇÕES',
-      subtitle: 'Entenda como aproveitar o app ao máximo',
-      back: 'Voltar',
-      generalTitle: 'Uso Geral (Modo Clássico)',
-      remoteTitle: 'Controles Remotos Bluetooth',
-      multiplayerTitle: 'Modo Multiplayer (Treinos)',
-    },
-    en: {
-      title: 'HELP & INSTRUCTIONS',
-      subtitle: 'Learn how to get the most out of the app',
-      back: 'Back',
-      generalTitle: 'General Usage (Classic Mode)',
-      remoteTitle: 'Bluetooth Remote Controls',
-      multiplayerTitle: 'Multiplayer Mode (Training)',
-    },
-    es: {
-      title: 'AYUDA E INSTRUCCIONES',
-      subtitle: 'Aprende a sacar el máximo provecho de la app',
-      back: 'Volver',
-      generalTitle: 'Uso General (Modo Clásico)',
-      remoteTitle: 'Controles Remotos Bluetooth',
-      multiplayerTitle: 'Modo Multiplayer (Entrenamientos)',
-    }
-  };
+  const t = TRANSLATIONS[language] || TRANSLATIONS.pt;
 
-  const t = translations[language] || translations.pt;
-
-  const sections: AccordionSection[] = [
+  const sections: AccordionSection[] = React.useMemo(() => [
     {
       id: 'general',
       title: t.generalTitle,
@@ -262,7 +263,7 @@ export default function HelpScreen({ onBack, language }: HelpScreenProps) {
         </View>
       ),
     },
-  ];
+  ], [language, t]);
 
   return (
     <View style={styles.container}>

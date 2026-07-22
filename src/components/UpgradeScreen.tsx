@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   Alert,
   ActivityIndicator,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { auth, db } from '../services/firebaseConfig';
@@ -20,86 +19,88 @@ interface UpgradeScreenProps {
   onUpgradeSuccess: () => void;
 }
 
+const TEXTS = {
+  pt: {
+    title: 'Liberte o Poder Total',
+    subtitle: 'Escolha o plano ideal para elevar seu nível no tênis',
+    lifetime: 'Acesso Vitalício',
+    lifetimeDesc: 'Pague uma vez, use para sempre. Sem assinaturas.',
+    trial: 'Experimente Grátis',
+    trialDesc: '7 dias grátis, depois R$ 49,90 pago uma única vez.',
+    startTrial: 'Iniciar Teste Grátis (7 Dias)',
+    buyLifetime: 'Adquirir Licença Vitalícia',
+    featuresTitle: 'O que você terá no Pro:',
+    featureAds: '100% Livre de Anúncios',
+    featureAdsDesc: 'Foco total no jogo, sem distrações visuais.',
+    featureWatch: 'Integração com Apple Watch',
+    featureWatchDesc: 'Marque pontos diretamente pelo pulso.',
+    featureRemote: 'Controles Remotos & Mapeamento BLE',
+    featureRemoteDesc: 'Use botões Bluetooth ou botões de volume.',
+    featureCloud: 'Histórico & Sincronização em Nuvem',
+    featureCloudDesc: 'Salve mais de 5 partidas e sincronize seus dados.',
+    featureMulti: 'Multiplayer & Ranking Completo',
+    featureMultiDesc: 'Gerencie filas de treinos e tabelas de líderes.',
+    purchaseSuccess: 'Parabéns! Você agora é um membro PRO!',
+    purchaseError: 'Erro ao processar ativação. Tente novamente.',
+    legalText: 'Termos de Uso e Política de Privacidade se aplicam.',
+    back: 'Voltar',
+  },
+  en: {
+    title: 'Unlock Full Power',
+    subtitle: 'Choose the perfect plan to elevate your tennis game',
+    lifetime: 'Lifetime Access',
+    lifetimeDesc: 'Pay once, use forever. No subscriptions.',
+    trial: 'Try for Free',
+    trialDesc: '7 days free trial, then $9.99 one-time payment.',
+    startTrial: 'Start 7-Day Free Trial',
+    buyLifetime: 'Buy Lifetime License',
+    featuresTitle: 'What you get with Pro:',
+    featureAds: '100% Ad-Free',
+    featureAdsDesc: 'Complete focus on the match, no distractions.',
+    featureWatch: 'Apple Watch Integration',
+    featureWatchDesc: 'Score points directly from your wrist.',
+    featureRemote: 'Remote Controls & BLE Mapping',
+    featureRemoteDesc: 'Use custom Bluetooth clickers or volume buttons.',
+    featureCloud: 'Match History & Cloud Sync',
+    featureCloudDesc: 'Save unlimited matches and backup your stats.',
+    featureMulti: 'Multiplayer & Rankings',
+    featureMultiDesc: 'Manage rotation queues and leaderboards.',
+    purchaseSuccess: 'Congratulations! You are now a PRO member!',
+    purchaseError: 'Activation failed. Please try again.',
+    legalText: 'Terms of Service and Privacy Policy apply.',
+    back: 'Back',
+  },
+  es: {
+    title: 'Libera el Poder Total',
+    subtitle: 'Elige el plan ideal para elevar tu nivel de tenis',
+    lifetime: 'Acceso Vitalicio',
+    lifetimeDesc: 'Paga una vez, úsalo para siempre. Sin suscripciones.',
+    trial: 'Pruébalo Gratis',
+    trialDesc: '7 días gratis, luego $9.99 pago único.',
+    startTrial: 'Iniciar Prueba Gratis (7 Días)',
+    buyLifetime: 'Adquirir Licencia Vitalicia',
+    featuresTitle: 'Lo que obtienes con Pro:',
+    featureAds: '100% Libre de Anuncios',
+    featureAdsDesc: 'Enfoque total en el juego, sin distracciones.',
+    featureWatch: 'Integración con Apple Watch',
+    featureWatchDesc: 'Suma puntos directamente desde tu muñeca.',
+    featureRemote: 'Controles Remotos y Mapeo BLE',
+    featureRemoteDesc: 'Usa botones Bluetooth o botones de volumen.',
+    featureCloud: 'Historial y Sincronización en la Nube',
+    featureCloudDesc: 'Guarda partidos ilimitados y respalda tus datos.',
+    featureMulti: 'Multiplayer y Clasificaciones',
+    featureMultiDesc: 'Administra filas de entrenamiento y tablas de líderes.',
+    purchaseSuccess: '¡Felicitaciones! ¡Ahora eres miembro PRO!',
+    purchaseError: 'Error al procesar la activación. Inténtalo de nuevo.',
+    legalText: 'Se aplican los Términos de Uso y Política de Privacidad.',
+    back: 'Volver',
+  },
+};
+
 export default function UpgradeScreen({ onClose, language, onUpgradeSuccess }: UpgradeScreenProps) {
   const [loading, setLoading] = useState(false);
 
-  const texts = {
-    pt: {
-      title: 'Liberte o Poder Total',
-      subtitle: 'Escolha o plano ideal para elevar seu nível no tênis',
-      lifetime: 'Acesso Vitalício',
-      lifetimeDesc: 'Pague uma vez, use para sempre. Sem assinaturas.',
-      trial: 'Experimente Grátis',
-      trialDesc: '7 dias grátis, depois R$ 49,90 pago uma única vez.',
-      startTrial: 'Iniciar Teste Grátis (7 Dias)',
-      buyLifetime: 'Adquirir Licença Vitalícia',
-      featuresTitle: 'O que você terá no Pro:',
-      featureAds: '100% Livre de Anúncios',
-      featureAdsDesc: 'Foco total no jogo, sem distrações visuais.',
-      featureWatch: 'Integração com Apple Watch',
-      featureWatchDesc: 'Marque pontos diretamente pelo pulso.',
-      featureRemote: 'Controles Remotos & Mapeamento BLE',
-      featureRemoteDesc: 'Use botões Bluetooth ou botões de volume.',
-      featureCloud: 'Histórico & Sincronização em Nuvem',
-      featureCloudDesc: 'Salve mais de 5 partidas e sincronize seus dados.',
-      featureMulti: 'Multiplayer & Ranking Completo',
-      featureMultiDesc: 'Gerencie filas de treinos e tabelas de líderes.',
-      purchaseSuccess: 'Parabéns! Você agora é um membro PRO!',
-      purchaseError: 'Erro ao processar ativação. Tente novamente.',
-      legalText: 'Termos de Uso e Política de Privacidade se aplicam.',
-      back: 'Voltar',
-    },
-    en: {
-      title: 'Unlock Full Power',
-      subtitle: 'Choose the perfect plan to elevate your tennis game',
-      lifetime: 'Lifetime Access',
-      lifetimeDesc: 'Pay once, use forever. No subscriptions.',
-      trial: 'Try for Free',
-      trialDesc: '7 days free trial, then $9.99 one-time payment.',
-      startTrial: 'Start 7-Day Free Trial',
-      buyLifetime: 'Buy Lifetime License',
-      featuresTitle: 'What you get with Pro:',
-      featureAds: '100% Ad-Free',
-      featureAdsDesc: 'Complete focus on the match, no distractions.',
-      featureWatch: 'Apple Watch Integration',
-      featureWatchDesc: 'Score points directly from your wrist.',
-      featureRemote: 'Remote Controls & BLE Mapping',
-      featureRemoteDesc: 'Use custom Bluetooth clickers or volume buttons.',
-      featureCloud: 'Match History & Cloud Sync',
-      featureCloudDesc: 'Save unlimited matches and backup your stats.',
-      featureMulti: 'Multiplayer & Rankings',
-      featureMultiDesc: 'Manage rotation queues and leaderboards.',
-      purchaseSuccess: 'Congratulations! You are now a PRO member!',
-      purchaseError: 'Activation failed. Please try again.',
-      legalText: 'Terms of Service and Privacy Policy apply.',
-      back: 'Back',
-    },
-    es: {
-      title: 'Libera el Poder Total',
-      subtitle: 'Elige el plan ideal para elevar tu nivel de tenis',
-      lifetime: 'Acceso Vitalicio',
-      lifetimeDesc: 'Paga una vez, úsalo para siempre. Sin suscripciones.',
-      trial: 'Pruébalo Gratis',
-      trialDesc: '7 días gratis, luego $9.99 pago único.',
-      startTrial: 'Iniciar Prueba Gratis (7 Días)',
-      buyLifetime: 'Adquirir Licencia Vitalicia',
-      featuresTitle: 'Lo que obtienes con Pro:',
-      featureAds: '100% Libre de Anuncios',
-      featureAdsDesc: 'Enfoque total en el juego, sin distracciones.',
-      featureWatch: 'Integración con Apple Watch',
-      featureWatchDesc: 'Suma puntos directamente desde tu muñeca.',
-      featureRemote: 'Controles Remotos y Mapeo BLE',
-      featureRemoteDesc: 'Usa botones Bluetooth o botones de volumen.',
-      featureCloud: 'Historial y Sincronización en la Nube',
-      featureCloudDesc: 'Guarda partidos ilimitados y respalda tus datos.',
-      featureMulti: 'Multiplayer y Clasificaciones',
-      featureMultiDesc: 'Administra filas de entrenamiento y tablas de líderes.',
-      purchaseSuccess: '¡Felicitaciones! ¡Ahora eres miembro PRO!',
-      purchaseError: 'Error al procesar la activación. Inténtalo de nuevo.',
-      legalText: 'Se aplican los Términos de Uso y Política de Privacidad.',
-      back: 'Volver',
-    },
-  }[language || 'pt'];
+  const texts = TEXTS[language] || TEXTS.pt;
 
   const handleActivatePro = async (type: 'trial' | 'lifetime') => {
     const user = auth.currentUser;
@@ -117,8 +118,9 @@ export default function UpgradeScreen({ onClose, language, onUpgradeSuccess }: U
     try {
       const userRef = doc(db, 'profiles', user.uid);
       
-      // Gerar uma chave de API secreta se não existir
-      const generatedApiKey = 'koala_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const array = new Uint8Array(16);
+      crypto.getRandomValues(array);
+      const generatedApiKey = 'koala_' + Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
 
       await setDoc(userRef, {
         tier: 'pro',
